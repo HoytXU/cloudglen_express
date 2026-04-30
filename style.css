@@ -1,0 +1,148 @@
+html,
+body {
+  margin: 0;
+  background: #ffffff;
+  color: #111111;
+  font-family: Georgia, "Times New Roman", "Liberation Serif", Times, serif;
+  font-size: 17px;
+  line-height: 1.6;
+}
+
+html {
+  overflow-x: hidden;
+}
+
+body {
+  min-height: 100vh;
+}
+
+.page {
+  box-sizing: border-box;
+  width: 70%;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 56px 0 80px;
+}
+
+header {
+  text-align: center;
+  margin-bottom: 28px;
+}
+
+h1 {
+  font-size: 1.9rem;
+  font-weight: normal;
+  letter-spacing: 0.01em;
+  margin: 0 0 4px;
+}
+
+.subtitle {
+  font-style: italic;
+  color: #444;
+  margin: 0;
+}
+
+.shader-card {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  margin: 0 0 8px;
+  background: #000;
+}
+
+#gl {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+figure {
+  margin: 0 0 36px;
+}
+
+figcaption {
+  text-align: center;
+  font-style: italic;
+  color: #ffffff;
+  font-size: 0.88rem;
+  margin-top: 6px;
+}
+
+section {
+  margin-top: 26px;
+}
+
+h2 {
+  font-size: 1.1rem;
+  font-weight: bold;
+  margin: 26px 0 8px;
+}
+
+p {
+  margin: 0 0 12px;
+  text-align: justify;
+  hyphens: auto;
+}
+
+.formula {
+  text-align: center;
+  font-style: italic;
+  margin: 14px 0;
+}
+
+em {
+  font-style: italic;
+}
+
+code {
+  font-family: "Courier New", Consolas, "Liberation Mono", monospace;
+  font-size: 0.92em;
+  font-style: normal;
+  color: #ffffff;
+}
+
+footer {
+  margin-top: 40px;
+  padding-top: 14px;
+  border-top: 1px solid #ddd;
+  font-size: 0.85rem;
+  color: #555;
+  font-style: italic;
+}
+
+@media (max-width: 720px) {
+  .page {
+    width: 92%;
+    max-width: none;
+    padding: 28px 0 48px;
+  }
+}
+
+body.shader-fullscreen {
+  overflow: hidden;
+}
+
+body.shader-fullscreen .page {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+}
+
+body.shader-fullscreen .page > :not(.shader-card) {
+  display: none;
+}
+
+body.shader-fullscreen .shader-card {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+  aspect-ratio: auto;
+}
+
+body.shader-fullscreen .shader-card figcaption,
+body.shader-fullscreen .shader-card > :not(canvas) {
+  display: none;
+}
