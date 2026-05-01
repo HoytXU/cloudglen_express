@@ -84,9 +84,15 @@ p {
 }
 
 .formula {
-  text-align: center;
+  box-sizing: border-box;
+  max-width: 100%;
+  width: fit-content;
+  margin: 12px auto 14px;
+  overflow-x: auto;
+  text-align: left;
   font-style: italic;
-  margin: 14px 0;
+  line-height: 1.45;
+  hyphens: none;
 }
 
 em {
@@ -97,7 +103,7 @@ code {
   font-family: "Courier New", Consolas, "Liberation Mono", monospace;
   font-size: 0.92em;
   font-style: normal;
-  color: #ffffff;
+  color: #000000;
 }
 
 footer {
