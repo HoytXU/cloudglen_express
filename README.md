@@ -1,11 +1,11 @@
-# Cloud Train
+# Cloudglen Express
 
 A WebGL2 reimplementation of the ShaderToy
-[*Cloud Train* (`Ndc3zl`)](https://www.shadertoy.com/view/Ndc3zl) by **iq**,
+[** (`Ndc3zl`)](https://www.shadertoy.com/view/Ndc3zl) by **mdb**,
 runnable as a self-contained static page with a local soundtrack.
 
 ```
-cloud_train/
+cloudglen_express/
 ├── index.html              page shell, loads main.js
 ├── style.css               full-viewport canvas
 ├── main.js                 WebGL2 boilerplate (compile, bind, draw, audio)
@@ -268,6 +268,6 @@ modify the host:
 
 ## Credits
 
-- Shader: [iq, *Cloud Train*](https://www.shadertoy.com/view/Ndc3zl)
+- Shader: [iq, *up in the cloud sea*](https://www.shadertoy.com/view/Ndc3zl)
 - Soundtrack: [*Bornean* — Helmy Trianggara](https://www.bilibili.com/video/BV1gdFNznEQK/)
 - WebGL2 host: written for this repo.
