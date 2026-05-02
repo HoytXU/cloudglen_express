@@ -16,9 +16,24 @@ const soundtrack = new Audio("./assets/soundtrack.mp3");
 soundtrack.loop = true;
 soundtrack.preload = "auto";
 
+let soundEnabled = true;
+
 function startSoundtrack() {
+  if (!soundEnabled) return;
   soundtrack.play().catch(() => {});
 }
+
+const soundToggle = document.querySelector("#sound-toggle");
+soundToggle.addEventListener("click", () => {
+  soundEnabled = !soundEnabled;
+  soundToggle.setAttribute("aria-pressed", String(soundEnabled));
+  soundToggle.textContent = soundEnabled ? "Music: On" : "Music: Off";
+  if (soundEnabled) {
+    soundtrack.play().catch(() => {});
+  } else {
+    soundtrack.pause();
+  }
+});
 
 const vertexSource = `#version 300 es
 precision highp float;

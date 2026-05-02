@@ -123,6 +123,58 @@ footer {
   }
 }
 
+.shader-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 28px;
+}
+
+.sound-toggle {
+  font-family: inherit;
+  font-size: 0.82rem;
+  line-height: 1.4;
+  letter-spacing: 0.02em;
+  color: #222;
+  background: transparent;
+  border: 1px solid #999;
+  padding: 2px 10px;
+  cursor: pointer;
+}
+
+.shader-hint {
+  font-family: inherit;
+  font-size: 0.82rem;
+  line-height: 1.4;
+  letter-spacing: 0.02em;
+  color: #777;
+  font-style: italic;
+}
+
+.shader-hint kbd {
+  font-family: "Courier New", Consolas, "Liberation Mono", monospace;
+  font-size: 0.82rem;
+  font-style: normal;
+  color: #333;
+  background: #f4f4f4;
+  border: 1px solid #ccc;
+  border-radius: 2px;
+  padding: 0 4px;
+}
+
+.sound-toggle:hover {
+  background: #f4f4f4;
+}
+
+.sound-toggle:focus-visible {
+  outline: 1px solid #555;
+  outline-offset: 2px;
+}
+
+.sound-toggle[aria-pressed="false"] {
+  color: #888;
+}
+
 body.shader-fullscreen {
   overflow: hidden;
 }
