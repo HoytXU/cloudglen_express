@@ -85,13 +85,6 @@ h1 {
 .source-line a:hover,
 .ref-mark:hover { text-decoration: underline; }
 
-.notation-convention {
-  margin: 18px 0 0;
-  color: #666;
-  font-size: 0.78rem;
-  text-align: center;
-}
-
 .vec {
   font-style: italic;
   font-weight: 700;
