@@ -22,24 +22,25 @@
         <button id="fullscreen-toggle" class="control-button" type="button">Fullscreen</button>
         <span class="shader-hint">Press <kbd>F</kbd> for fullscreen</span>
       </div>
-
-      <section class="introduction">
-        <h2>From one function to a complete scene</h2>
-        <p>
-          The image is generated without photographs, meshes, or a 3D camera.
-          A smooth random function defines one cloud edge. Weighted copies add
-          detail, repeated layers create depth, and simple masks draw the train.
-        </p>
-      </section>
+      <p class="source-line">
+        Scene adapted from <a href="#ref-shadertoy">[1]</a> ·
+        soundtrack credited at <a href="#ref-music">[5]</a>
+      </p>
 
       <section aria-labelledby="noise-title">
         <p class="step">1</p>
         <h2 id="noise-title">A continuous random line</h2>
         <p>
-          Value noise interpolates between four random values at the corners of
-          each two-dimensional lattice cell. The figure shows a horizontal slice
-          through that field. A quintic fade curve makes the value, slope, and
-          curvature meet smoothly at every cell boundary.
+          Begin with two numbers, <i>a</i> and <i>b</i>. To find a value between
+          them, move a fraction <i>t</i> of the way from the first to the second.
+          This is the same idea as finding a point partway along a ruler.
+        </p>
+        <p class="small-equation">v(t) = (1 − t)a + tb</p>
+        <p>
+          Random values at consecutive grid points would form a jagged line if
+          joined directly. Replacing <i>t</i> with a smooth fade <i>s(t)</i>
+          rounds each join. Perlin introduced the quintic fade used here
+          <a class="ref-mark" href="#ref-perlin">[2]</a>.
         </p>
         <div class="study-panel">
           <figure class="visual-panel">
@@ -60,21 +61,30 @@
           </div>
         </div>
         <p class="explanation">
-          Here <i>f</i> is the position inside one cell, <i>u = s(f)</i> is the
-          component-wise fade, and <i>a–d</i> are its corner values. The study
-          hashes the lattice coordinates; the final shader reads those values
-          from the blue-noise texture. Both then perform the same interpolation.
+          The full shader works on a square rather than a line. It blends the
+          lower two corners, blends the upper two corners, then blends those two
+          answers vertically. The figure is one horizontal slice through this
+          two-dimensional field.
         </p>
+        <div class="math-notes">
+          <p><i>p</i> is the pixel position. <code>fract(p)</code> keeps only its position inside the current grid square.</p>
+          <p><i>a, b, c, d</i> are the four random corner values. The final scene reads them from a blue-noise texture; reference <a href="#ref-blue-noise">[4]</a> explains why blue-noise samples are spatially well distributed.</p>
+          <p>The fade has flat ends, so adjacent squares meet without a visible corner. It changes the route between the values, not the values themselves.</p>
+        </div>
       </section>
 
       <section aria-labelledby="cloud-title">
         <p class="step">2</p>
         <h2 id="cloud-title">One cloud boundary</h2>
         <p>
-          Several noise scales are added together. Large features carry the
-          silhouette; faster and weaker signals supply progressively finer detail.
-          This weighted, normalized sum is commonly called fractal Brownian
-          motion (fBm) in procedural graphics.
+          One smooth noise line makes broad hills but little detail. Imagine
+          drawing a large wavy coastline, then adding smaller wiggles with a
+          lighter pencil. The shader does the same by adding scaled copies of noise.
+        </p>
+        <p class="small-equation">cloud = broad shape + smaller detail + fine detail</p>
+        <p>
+          Each copy is called an octave. This octave construction is commonly
+          called fBm in procedural graphics <a class="ref-mark" href="#ref-fbm">[3]</a>.
         </p>
         <div class="study-panel">
           <figure class="visual-panel comparison">
@@ -104,15 +114,27 @@
           eight. Smoke uses the same construction with a slower decay,
           <i>g = 0.9</i>, which retains more fine-scale variation.
         </p>
+        <div class="math-notes">
+          <p>The summation symbol in the panel is shorthand for repeatedly adding terms. For the three-scale figure it expands to:</p>
+          <p class="worked-equation">C(<b>p</b>) = [n(<b>p</b>) + 0.7n(2<b>p</b>) + 0.49n(4<b>p</b>)] / 2.19</p>
+          <p><code>2p</code> makes features half as wide; <code>4p</code> makes them one quarter as wide. The weights 0.7 and 0.49 make the smaller features weaker.</p>
+          <p>The denominator 2.19 is simply <i>1 + 0.7 + 0.49</i>. Dividing by it prevents the image from becoming brighter or taller just because more octaves were added.</p>
+        </div>
       </section>
 
       <section aria-labelledby="depth-title">
         <p class="step">3</p>
         <h2 id="depth-title">Layers and parallax</h2>
         <p>
-          The same cloud function is evaluated at several heights and phases.
-          Distant layers move slowly; nearby layers move quickly and cover the
-          layers behind them.
+          Look through a train window: a nearby fence sweeps past quickly while
+          distant hills barely move. This is parallax. The shader imitates it by
+          dividing time by an artificial distance <i>d</i>.
+        </p>
+        <p class="small-equation">horizontal shift = time / distance</p>
+        <p>
+          The same cloud function is then reused at different heights, sizes,
+          phases, and distances. Painting slow pale layers first and fast dark
+          layers last produces a simple sense of depth.
         </p>
         <div class="study-panel">
           <figure class="visual-panel">
@@ -138,15 +160,26 @@
           of the noise field. Since velocity is proportional to 1/<i>d</i>, a
           larger distance produces slower motion.
         </p>
+        <div class="math-notes">
+          <p>Read the equation from inside outward: move the sample by <i>t/d</i>; use &lambda; to choose the feature size; use &phi; to select a different part of the noise; then evaluate the cloud.</p>
+          <p>Because cloud noise lies roughly between 0 and 1, subtracting ½ centres it around zero. <i>A</i> controls how far it moves up and down, and <i>m</i> lifts the complete line to its intended height.</p>
+          <p>For example, a layer with <i>d = 20</i> moves one tenth as fast as a layer with <i>d = 2</i>. This relative motion is the depth cue.</p>
+        </div>
       </section>
 
       <section aria-labelledby="form-title">
         <p class="step">4</p>
         <h2 id="form-title">Train and bridge masks</h2>
         <p>
-          Rectangles define the train body, distance tests define the wheels,
-          and repeated coordinates define the bridge. Their hard silhouette
-          remains legible against the continuous cloud boundaries.
+          A mask is a stencil: 1 means “paint this pixel” and 0 means “leave the
+          existing colour.” A wheel begins with the familiar definition of a
+          circle—every point closer than radius <i>r</i> to its centre <i>c</i>.
+        </p>
+        <p class="small-equation">inside the wheel when distance(pixel, centre) &lt; radius</p>
+        <p>
+          Rectangular masks form the body and chimney. Repeating the horizontal
+          coordinate produces carriages and bridge spans without listing every
+          copy separately.
         </p>
         <div class="study-panel">
           <figure class="visual-panel">
@@ -173,15 +206,60 @@
           It also uses a hard <code>step</code> test on squared distance for its
           much smaller final-render wheels.
         </p>
+        <div class="math-notes">
+          <p>The distance ‖<b>p</b>−<b>c</b>‖ asks how far the current pixel is from a wheel centre. Pixels nearer than radius <i>r</i> receive a mask value of 1; pixels outside <i>r + &epsilon;</i> receive 0.</p>
+          <p><code>smoothstep</code> changes gradually from 0 to 1 across the tiny interval &epsilon;. Subtracting it from 1 makes the inside opaque and the outside transparent while keeping the edge smooth.</p>
+          <p><code>max</code> performs a union: if any component contains the pixel, the complete train mask contains it.</p>
+        </div>
+      </section>
+
+      <section aria-labelledby="smoke-title">
+        <p class="step">5</p>
+        <h2 id="smoke-title">A widening, irregular smoke plume</h2>
+        <p>
+          Imagine drawing a thick ribbon around a pencil line. The line gives the
+          smoke its path; a width value says how far pixels may lie from that path
+          and still belong to the plume.
+        </p>
+        <p class="small-equation">smoke pixel when |pixel height − centre height| &lt; width</p>
+        <p>
+          The shader bends the centreline upward with a square root, changes the
+          width with distance from the chimney, and adds fBm so the ribbon does
+          not look mechanically perfect.
+        </p>
+        <div class="study-panel">
+          <figure class="visual-panel">
+            <canvas class="study-canvas" data-demo="smoke" aria-label="Construction of a curved procedural smoke plume"></canvas>
+          </figure>
+          <div class="study-text">
+            <p class="equation equation-lines">
+              x = u<sub>chimney</sub> − u<sub>x</sub><br>
+              c(x,t) = 0.16&radic;x + 0.12 − 0.4N(<b>u</b>,t)<br>
+              w(x) = 0.8xe<sup>−10x</sup><br>
+              M<sub>smoke</sub> = [|u<sub>y</sub>−c(x,t)| &lt; w(x)]
+            </p>
+          </div>
+        </div>
+        <div class="math-notes">
+          <p>The horizontal distance <i>x</i> is zero at the chimney and increases behind the train. The square root bends the plume upward quickly near the chimney and more gradually farther away.</p>
+          <p><i>N</i> denotes <code>fbm2(...) − 0.55</code>: the eight-octave smoke noise with gain 0.9, shifted so it fluctuates around zero. Subtracting it from the centreline makes the plume wander rather than follow a perfect curve.</p>
+          <p>In <i>w(x) = 0.8xe<sup>−10x</sup></i>, the factor <i>x</i> first widens the plume, while the exponential factor eventually shrinks it. Together they reach maximum width at <i>x = 0.1</i>.</p>
+        </div>
       </section>
 
       <section class="synthesis" aria-labelledby="synthesis-title">
-        <p class="step">5</p>
+        <p class="step">6</p>
         <h2 id="synthesis-title">Final expression</h2>
         <p>
-          Each pixel is formed by drawing the distant layers first, then the
-          train, smoke, bridge, and foreground clouds. This order matches the
-          sequence of <code>mix</code> operations in the production shader.
+          Think of the scene as transparent sheets placed on a desk. The sheet
+          placed last hides earlier sheets wherever it is opaque. In GLSL, one
+          such placement is a colour blend controlled by a mask.
+        </p>
+        <p class="small-equation">new colour = mix(old colour, layer colour, layer mask)</p>
+        <p>
+          The production shader draws background clouds, train, smoke, bridge,
+          and foreground clouds in that order, following the source composition
+          <a class="ref-mark" href="#ref-shadertoy">[1]</a>.
         </p>
         <div class="final-expression">
           F(<b>u</b>,t) = V(<b>u</b>) [L<sub>bg</sub> ⊕ M<sub>train</sub>
@@ -194,39 +272,47 @@
           The operator ⊕ means “draw over,” from left to right. The vignette
           equals 1 at the image centre and falls to 0.5 at its edges.
         </p>
+        <div class="math-notes">
+          <p>The ⊕ symbols mean the same ordered “draw over” operation as <code>mix</code>. Foreground clouds can cover the bridge, and the bridge can cover smoke where their masks overlap.</p>
+          <p>The second pass multiplies the finished scene by <i>V</i>. At the image centre, both coordinates are ½ and <i>V = 1</i>, so the colour is unchanged. At any edge, <i>V = 0.5</i>, so the colour is half as bright.</p>
+        </div>
       </section>
 
       <section class="references" aria-labelledby="references-title">
         <h2 id="references-title">References</h2>
         <ol>
-          <li>
+          <li id="ref-shadertoy">
             mdb, <a href="https://www.shadertoy.com/view/Ndc3zl"><em>Up in the Cloud Sea</em></a>.
-            Original ShaderToy scene and GLSL composition.
+            <span>Used as the original visual design and production GLSL adapted by this study.</span>
           </li>
-          <li>
+          <li id="ref-perlin">
             Ken Perlin, <a href="https://doi.org/10.1145/566570.566636">“Improving Noise”</a>,
-            SIGGRAPH 2002. Source of the quintic fade polynomial used here; this
-            project applies it to value noise rather than gradient noise.
+            SIGGRAPH 2002.
+            <span>Referenced specifically for the quintic fade polynomial. This study applies that polynomial to value noise, not Perlin’s gradient-noise construction.</span>
           </li>
-          <li>
+          <li id="ref-fbm">
             F. Kenton Musgrave, Craig E. Kolb, and Robert S. Mace,
             <a href="https://doi.org/10.1145/74333.74335">“The Synthesis and Rendering of Eroded Fractal Terrains”</a>,
-            SIGGRAPH 1989. A foundational procedural-graphics treatment of
-            octave-based fractal terrain functions.
+            SIGGRAPH 1989.
+            <span>Referenced for octave-based fractal functions in procedural graphics; the page’s normalized cloud sum is a compact implementation of that general idea.</span>
           </li>
-          <li>
+          <li id="ref-blue-noise">
             Christoph Peters, <a href="https://momentsingraphics.de/BlueNoise.html">“Free Blue Noise Textures”</a>.
-            Background on the spectral properties and practical use of blue-noise textures.
+            <span>Included as background on blue-noise distributions. It explains the texture class sampled by the shader; it is not asserted as the provenance of this project’s particular PNG.</span>
           </li>
-          <li>
+          <li id="ref-music">
             Helmy Trianggara, <a href="https://www.bilibili.com/video/BV1gdFNznEQK/"><em>Bornean</em></a>
-            (Sape Dayak Kalimantan). Soundtrack used by this page.
+            (Sape Dayak Kalimantan).
+            <span>Source and artist credit for the optional soundtrack used by this page.</span>
           </li>
         </ol>
       </section>
 
       <footer>
-        <p>Cloudglen Express — WebGL2 procedural landscape study.</p>
+        <p>
+          Codex-assisted decomposition of mdb’s <em>Up in the Cloud Sea</em> on
+          ShaderToy, for educational purposes only.
+        </p>
       </footer>
     </main>
     <script type="module" src="./main.js"></script>

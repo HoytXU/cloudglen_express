@@ -63,13 +63,23 @@ h1 {
 .shader-hint { margin-left: auto; color: #777; font-size: 0.78rem; font-style: italic; }
 .shader-hint kbd { padding: 0 4px; border: 1px solid #ccc; background: #f5f5f5; font: 0.76rem monospace; }
 
-section { margin-top: 50px; }
-
-.introduction {
-  margin-top: 0;
-  padding-bottom: 30px;
-  border-bottom: 1px solid #ddd;
+.source-line {
+  margin: -28px 0 0;
+  color: #777;
+  font-size: 0.75rem;
+  text-align: right;
 }
+
+.source-line a,
+.ref-mark {
+  color: #355b70;
+  text-decoration: none;
+}
+
+.source-line a:hover,
+.ref-mark:hover { text-decoration: underline; }
+
+section { margin-top: 50px; }
 
 h2 { margin: 0 0 9px; font-size: 1.2rem; }
 p { margin: 0 0 12px; }
@@ -81,6 +91,21 @@ p { margin: 0 0 12px; }
   font-size: 0.7rem;
   font-weight: bold;
   letter-spacing: 0.08em;
+}
+
+.small-equation {
+  width: fit-content;
+  max-width: 100%;
+  margin: 16px auto;
+  padding: 7px 14px;
+  overflow-x: auto;
+  border-top: 1px solid #ddd;
+  border-bottom: 1px solid #ddd;
+  color: #25343d;
+  font-size: 1rem;
+  font-style: italic;
+  text-align: center;
+  white-space: nowrap;
 }
 
 .study-panel {
@@ -162,11 +187,32 @@ code { font: inherit; }
 }
 
 .explanation code,
-.synthesis code {
+.synthesis code,
+.math-notes code {
   padding: 0 3px;
   color: #25343d;
   background: #f2f2f2;
   font: 0.82em "Courier New", Consolas, monospace;
+}
+
+.math-notes {
+  margin: 12px 2px 0;
+  padding: 12px 15px 4px;
+  border-left: 2px solid #c9d3d8;
+  color: #444;
+  background: #fafafa;
+  font-size: 0.88rem;
+  line-height: 1.58;
+}
+
+.math-notes p { margin-bottom: 8px; }
+
+.worked-equation {
+  overflow-x: auto;
+  color: #25343d;
+  font-size: 1rem;
+  font-style: italic;
+  white-space: nowrap;
 }
 
 .synthesis { padding-top: 28px; border-top: 1px solid #ddd; }
@@ -200,6 +246,7 @@ code { font: inherit; }
 
 .references ol { margin: 14px 0 0; padding-left: 1.35rem; }
 .references li { margin-bottom: 10px; padding-left: 4px; color: #444; font-size: 0.88rem; }
+.references li span { display: block; margin-top: 2px; color: #666; }
 .references a { color: #274e67; text-decoration-thickness: 1px; text-underline-offset: 2px; }
 .references a:hover { color: #111; }
 
@@ -218,4 +265,5 @@ body.shader-fullscreen .shader-card { position: fixed; inset: 0; width: 100vw; h
   .study-text { padding: 18px; }
   .shader-controls { flex-wrap: wrap; }
   .shader-hint { width: 100%; margin: 2px 0 0; }
+  .source-line { margin-top: -28px; }
 }

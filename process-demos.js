@@ -42,6 +42,19 @@ float cloudNoise(vec2 p) {
   return (shape + detail + fine) / 2.19;
 }
 
+float smokeNoise(vec2 p) {
+  float sum = 0.0;
+  float weight = 0.0;
+  float amplitude = 1.0;
+  for (int k = 0; k < 8; k++) {
+    sum += amplitude * noise(p);
+    weight += amplitude;
+    p *= 2.0;
+    amplitude *= 0.9;
+  }
+  return sum / weight;
+}
+
 vec3 skyColor(vec2 uv) {
   return mix(vec3(0.96, 0.97, 0.98), vec3(0.72, 0.80, 0.85), uv.y);
 }
@@ -102,6 +115,35 @@ void main() {
   color = mix(color, vec3(0.68, 0.76, 0.80), 1.0 - smoothstep(middleY - 0.008, middleY + 0.008, uv.y));
   color = mix(color, vec3(0.47, 0.58, 0.63), 1.0 - smoothstep(nearY - 0.008, nearY + 0.008, uv.y));
   color = mix(color, vec3(0.25, 0.33, 0.37), 1.0 - smoothstep(frontY - 0.008, frontY + 0.008, uv.y));
+  outColor = vec4(color, 1.0);
+}`,
+
+  smoke: `${fragmentPrelude}
+void main() {
+  vec2 uv = gl_FragCoord.xy / uResolution;
+
+  // Crop the production shader's coordinate system to the plume region.
+  vec2 p = vec2(0.55 * uv.x, 0.45 * uv.y);
+  float x = 0.49 - p.x;
+  float h = smokeNoise(p + vec2(0.16 * uTime + 3.5, 0.0)) - 0.55;
+  float center = 0.16 * sqrt(max(x, 0.0)) + 0.12 - 0.4 * h;
+  float width = 0.8 * x * exp(-10.0 * x);
+
+  float plume = (1.0 - smoothstep(width, width + 0.004, abs(p.y - center)))
+    * step(0.0, x);
+  float centerline = (1.0 - smoothstep(0.001, 0.0035, abs(p.y - center)))
+    * step(0.0, x);
+
+  vec3 color = vec3(0.96, 0.97, 0.97);
+  vec2 gridDistance = abs(fract(uv * vec2(10.0, 5.0)) - 0.5);
+  float grid = 1.0 - smoothstep(0.47, 0.49, max(gridDistance.x, gridDistance.y));
+  color = mix(color, vec3(0.67, 0.71, 0.73), 0.15 * grid);
+  color = mix(color, vec3(0.63, 0.70, 0.73), 0.72 * plume);
+  color = mix(color, vec3(0.18, 0.31, 0.38), centerline);
+
+  float chimney = step(0.476, p.x) * step(p.x, 0.49)
+    * step(0.07, p.y) * step(p.y, 0.13);
+  color = mix(color, vec3(0.18, 0.22, 0.24), chimney);
   outColor = vec4(color, 1.0);
 }`,
 
