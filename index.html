@@ -3,6 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="A progressive GLSL study of procedural clouds, parallax, and silhouette composition.">
     <title>Cloudglen Express</title>
     <link rel="stylesheet" href="./style.css">
   </head>
@@ -10,228 +11,143 @@
     <main class="page">
       <header>
         <h1>Cloudglen Express</h1>
+        <p class="subtitle">A procedural landscape built from noise, layers, and masks</p>
       </header>
 
       <figure class="shader-card">
         <canvas id="gl" aria-label="Cloudglen Express WebGL animation"></canvas>
       </figure>
-
       <div class="shader-controls">
-        <button id="sound-toggle" class="sound-toggle" type="button" aria-pressed="true">Music: On</button>
-        <span class="shader-hint">press <kbd>F</kbd> for fullscreen</span>
+        <button id="sound-toggle" class="control-button" type="button" aria-pressed="false">Music: Off</button>
+        <button id="fullscreen-toggle" class="control-button" type="button">Fullscreen</button>
+        <span class="shader-hint">Press <kbd>F</kbd> for fullscreen</span>
       </div>
-      <section>
-        <h2>1. Value noise</h2>
+
+      <section class="introduction">
+        <h2>From one function to a complete scene</h2>
         <p>
-          The animation is generated entirely from a continuous random scalar
-          field <em>n</em>: <em>&#8477;</em><sup>2</sup> &rarr; [0, 1] sampled
-          on a 1024&times;1024 lattice of independent uniform values
-          <em>g</em>(<em>p</em>) stored in <code>iChannel0</code>. For an
-          arbitrary point <em>x</em>&nbsp;&isin;&nbsp;<em>&#8477;</em><sup>2</sup>,
-          let <em>p</em> = &lfloor;<em>x</em>&rfloor; and
-          <em>f</em> = <em>x</em> &minus; <em>p</em>. With the four corner
-          values
-          <em>a</em>&nbsp;=&nbsp;<em>g</em>(<em>p</em>),
-          <em>b</em>&nbsp;=&nbsp;<em>g</em>(<em>p</em> + <em>e</em><sub>1</sub>),
-          <em>c</em>&nbsp;=&nbsp;<em>g</em>(<em>p</em> + <em>e</em><sub>2</sub>),
-          <em>d</em>&nbsp;=&nbsp;<em>g</em>(<em>p</em> + <em>e</em><sub>1</sub> + <em>e</em><sub>2</sub>),
-          the field is the bilinear interpolation
-        </p>
-        <p class="formula">
-          n(x) = a + (b&minus;a)&thinsp;u(f<sub>x</sub>) +
-          (c&minus;a)&thinsp;u(f<sub>y</sub>) +
-          (a&minus;b&minus;c+d)&thinsp;u(f<sub>x</sub>)&thinsp;u(f<sub>y</sub>),
-        </p>
-        <p>where the interpolation parameter is the quintic fade</p>
-        <p class="formula">
-          u(t) = 6t<sup>5</sup> &minus; 15t<sup>4</sup> + 10t<sup>3</sup>.
-        </p>
-        <p>
-          By construction <em>u</em>(0) = 0, <em>u</em>(1) = 1,
-          <em>u'</em>(0) = <em>u'</em>(1) = 0, and
-          <em>u''</em>(0) = <em>u''</em>(1) = 0. The vanishing of <em>u'</em>
-          eliminates the directional creases that occur on cell boundaries
-          under bilinear interpolation; the additional vanishing of <em>u''</em>
-          eliminates the curvature creases that the cubic smoothstep
-          3<em>t</em><sup>2</sup>&minus;2<em>t</em><sup>3</sup> leaves
-          visible after octave summation.
+          The image is generated without photographs, meshes, or a 3D camera.
+          A smooth random function defines one cloud edge. Weighted copies add
+          detail, repeated layers create depth, and simple masks draw the train.
         </p>
       </section>
 
-      <section>
-        <h2>2. Fractal Brownian motion</h2>
+      <section aria-labelledby="noise-title">
+        <p class="step">1</p>
+        <h2 id="noise-title">A continuous random line</h2>
         <p>
-          Cloud silhouettes are produced by an octave-weighted sum of the
-          noise field with doubling frequency:
+          Value noise interpolates between random lattice values. It remains
+          unpredictable at large scales while changing continuously between samples.
         </p>
-        <p class="formula">
-          fbm(x; &alpha;) =
-          &Sigma;<sub>i=0</sub><sup>N&minus;1</sup>
-          &alpha;<sup>i</sup>&thinsp;n(2<sup>i</sup>x) /
-          &Sigma;<sub>i=0</sub><sup>N&minus;1</sup>&alpha;<sup>i</sup>,
-          &nbsp; N = 8.
-        </p>
-        <p>
-          Two values of the gain <em>&alpha;</em> are used: <em>&alpha;</em>
-          = 0.7 for the cloud silhouettes and <em>&alpha;</em> = 0.9 for the
-          smoke. With lacunarity 2 and gain <em>&alpha;</em> the resulting
-          power spectrum decays as
-          <em>f</em><sup>&minus;log<sub>2</sub>&alpha;</sup>; gain 0.7 is
-          close to pink noise, gain 0.9 closer to white. Normalising by
-          &Sigma;<em>&alpha;</em><sup><em>i</em></sup> keeps the output range
-          independent of the octave count.
-        </p>
+        <div class="study-panel">
+          <figure class="visual-panel">
+            <canvas class="study-canvas" data-demo="noise" aria-label="Graph of a smooth one-dimensional noise function"></canvas>
+            <span class="axis axis-y">n(x)</span>
+            <span class="axis axis-x">x</span>
+          </figure>
+          <div class="study-text">
+            <p class="equation">n(x) = lerp(r<sub>i</sub>, r<sub>i+1</sub>, s(fract(x)))</p>
+            <pre><code><span class="code-type">float</span> f = fract(x);
+f = f*f*f*(f*(f*<span class="code-number">6.0</span>-<span class="code-number">15.0</span>)+<span class="code-number">10.0</span>);
+<span class="code-type">float</span> y = mix(a, b, f);</code></pre>
+          </div>
+        </div>
       </section>
 
-      <section>
-        <h2>3. Layered horizon by height-field rasterization</h2>
+      <section aria-labelledby="cloud-title">
+        <p class="step">2</p>
+        <h2 id="cloud-title">One cloud boundary</h2>
         <p>
-          The skyline is the union of thirteen horizontal cloud bands. Each
-          band is parametrised by a midline <em>m</em>, a vertical amplitude
-          <em>D</em>, a parallax distance <em>d</em>, and a phase offset
-          <em>&phi;</em>. The displacement of its upper silhouette at column
-          <em>x</em> is
+          Several noise scales are added together. Large features carry the
+          silhouette; faster and weaker signals supply progressively finer detail.
         </p>
-        <p class="formula">
-          h(x) = (fbm(x + (t/d + &phi;,&nbsp;0); 8) &minus; &frac12;)&middot;D,
-        </p>
-        <p>
-          where <em>t</em> = 4&middot;<code>iTime</code>. A pixel at
-          <em>uv</em> = (<em>uv<sub>x</sub></em>, <em>uv<sub>y</sub></em>)
-          is filled with shade <em>c<sub>i</sub></em> if
-        </p>
-        <p class="formula">
-          uv<sub>y</sub> &lt; m + h(uv<sub>x</sub>) &minus; &delta;<sub>i</sub>,
-        </p>
-        <p>
-          where the per-shade offsets &delta;<sub>i</sub> &isin; {0, 0.04,
-          0.08, 0.12, &hellip;} are tested in decreasing order. The first
-          inequality satisfied returns its colour, so the offsets produce the
-          inner gradient of a band, and processing bands from far (large
-          <em>d</em>) to near produces the depth gradient. Because each band
-          advects horizontally with rate 1/<em>d</em>, near bands move faster
-          than far bands &mdash; classical two-dimensional parallax driven
-          by a height field rather than textured strips.
-        </p>
+        <div class="study-panel">
+          <figure class="visual-panel comparison">
+            <canvas class="study-canvas" data-demo="detail" aria-label="Comparison between one octave and three octaves of noise"></canvas>
+            <span class="compare-label compare-left">one scale</span>
+            <span class="compare-label compare-right">three scales</span>
+          </figure>
+          <div class="study-text">
+            <p class="equation equation-large">
+              C(x) = <span class="fraction"><span>&Sigma;<sup>K−1</sup><sub>k=0</sub> a<sup>k</sup>n(2<sup>k</sup>x)</span><span>&Sigma;<sup>K−1</sup><sub>k=0</sub> a<sup>k</sup></span></span>
+            </p>
+            <pre><code><span class="code-type">float</span> sum = <span class="code-number">0.0</span>;
+<span class="code-type">for</span> (<span class="code-type">int</span> k = <span class="code-number">0</span>; k &lt; K; ++k) {
+  sum += amplitude * noise(p);
+  p *= <span class="code-number">2.0</span>;
+  amplitude *= <span class="code-number">0.7</span>;
+}</code></pre>
+          </div>
+        </div>
       </section>
 
-      <section>
-        <h2>4. Sub-frame foreground accumulation</h2>
+      <section aria-labelledby="depth-title">
+        <p class="step">3</p>
+        <h2 id="depth-title">Layers and parallax</h2>
         <p>
-          For pixels in the lower half of the image (<em>uv<sub>y</sub></em>
-          &lt; 0.5) the foreground colour is the temporal average
+          The same cloud function is evaluated at several heights and phases.
+          Distant layers move slowly; nearby layers move quickly and cover the
+          layers behind them.
         </p>
-        <p class="formula">
-          fg(uv) = (1/N)&thinsp;&Sigma;<sub>j=0</sub><sup>N&minus;1</sup>
-          F(uv,&nbsp;t + 4j/(60N)),
-          &nbsp; N = 5.
-        </p>
-        <p>
-          The five samples span 4(N&minus;1)/(60N) &approx; 0.053 units in
-          <em>t</em>, or about one display frame at 60&nbsp;Hz. This
-          band-limits the high-frequency aliasing produced by the
-          <code>step</code>-based layer test on the fastest cloud bands by
-          smearing each silhouette over a single frame's worth of motion.
-        </p>
+        <div class="study-panel">
+          <figure class="visual-panel">
+            <canvas class="study-canvas" data-demo="layers" aria-label="Four cloud layers moving at distance-dependent speeds"></canvas>
+          </figure>
+          <div class="study-text centered">
+            <p class="equation equation-large">
+              h<sub>i</sub>(x,t) = m<sub>i</sub> + A<sub>i</sub>
+              [C(x + t/d<sub>i</sub> + &phi;<sub>i</sub>) − ½]
+            </p>
+            <p class="symbols">
+              <i>m</i>: height &nbsp;·&nbsp; <i>A</i>: variation<br>
+              <i>d</i>: distance &nbsp;·&nbsp; <i>&phi;</i>: phase
+            </p>
+          </div>
+        </div>
       </section>
 
-      <section>
-        <h2>5. Smoke plume</h2>
+      <section aria-labelledby="form-title">
+        <p class="step">4</p>
+        <h2 id="form-title">Train and bridge masks</h2>
         <p>
-          Let <em>x</em> = 0.49 &minus; <em>uv<sub>x</sub></em> denote
-          horizontal distance behind the chimney, and let
-          <em>h</em>(<em>x</em>) be the same fbm evaluated with gain 0.9 and
-          a small reverse drift. The plume is the implicit region
+          Rectangles define the train body, distance tests define the wheels,
+          and repeated coordinates define the bridge. Their hard silhouette
+          remains legible against the continuous cloud boundaries.
         </p>
-        <p class="formula">
-          | uv<sub>y</sub> + 0.4&thinsp;h(x) &minus; 0.16&radic;x &minus; 0.12 |
-          &lt; 0.8&thinsp;x&thinsp;e<sup>&minus;10x</sup>.
-        </p>
-        <p>
-          The centreline
-          <em>y</em><sub>0</sub>(<em>x</em>) = 0.16&radic;<em>x</em> + 0.12
-          rises rapidly near the chimney and asymptotes; the half-thickness
-          <em>w</em>(<em>x</em>) = 0.8&thinsp;<em>x</em>&thinsp;e<sup>&minus;10<em>x</em></sup>
-          is a &Gamma;(2, 10)-shaped envelope peaking at <em>x</em> =
-          1/10; the additive 0.4&thinsp;<em>h</em>(<em>x</em>) noise
-          perturbs the centreline. A second test |&middot;| &lt; w(x)&minus;0.02
-          shades a hollow core slightly darker.
-        </p>
+        <div class="study-panel">
+          <figure class="visual-panel">
+            <canvas class="study-canvas" data-demo="train" aria-label="Train and bridge masks composited with cloud layers"></canvas>
+          </figure>
+          <div class="study-text">
+            <p class="equation">M<sub>train</sub> = max(M<sub>body</sub>, M<sub>roof</sub>, M<sub>wheels</sub>)</p>
+            <pre><code><span class="code-type">float</span> wheel = <span class="code-number">1.0</span> - step(
+  radius, length(uv - center)
+);
+color = mix(color, trainColor, mask);</code></pre>
+          </div>
+        </div>
       </section>
 
-      <section>
-        <h2>6. Procedural train and bridge</h2>
+      <section class="synthesis" aria-labelledby="synthesis-title">
+        <p class="step">5</p>
+        <h2 id="synthesis-title">Final expression</h2>
         <p>
-          The train is rasterised in fixed pixel-space coordinates by
-          intersecting axis-aligned masks. Wagons replicate via the modular
-          coordinate <em>uv</em><sub>2</sub> = fract(9&middot;<em>uv</em>);
-          a column is drawn whenever
+          Each pixel is formed by drawing the distant layers first, then the
+          bridge and train, and finally the foreground clouds and smoke.
         </p>
-        <p class="formula">
-          step(0.05,&nbsp;1 &minus; |2&thinsp;uv<sub>2,x</sub> &minus; 1|) = 1,
-        </p>
-        <p>
-          i.e. when the modular coordinate lies within 0.05 of the cell
-          centre. Wheels are squared-distance disks: a pixel belongs to the
-          wheel of radius <em>r</em> centred at <em>c</em> iff
-        </p>
-        <p class="formula">
-          &lVert;uv &minus; c&rVert;<sup>2</sup> &lt; r<sup>2</sup>,
-        </p>
-        <p>
-          implemented as <code>1 &minus; step(r&sup2;, dot(uv&minus;c,
-          uv&minus;c))</code> to avoid the square root.
-        </p>
-        <p>
-          The bridge tiles three spans across the screen by
-          <em>uv</em><sub>2,x</sub> = fract(3&thinsp;(<em>uv<sub>x</sub></em>
-          + <em>t</em>/5 + 32.5)). Its deck silhouette is the level set of
-          the parabola
-        </p>
-        <p class="formula">
-          D(uv<sub>2</sub>) = uv<sub>2,y</sub> &minus;
-          0.15&thinsp;(uv<sub>2,x</sub> &minus; &frac12;)<sup>2</sup>
-          &minus; 0.12.
-        </p>
-        <p>
-          The deck edge is rendered as <code>smoothstep(0.001, 0.003,
-          |D|)</code>, which approximates a sub-pixel anti-aliased
-          isocontour. A higher-frequency modular coordinate
-          fract(16&middot;<em>uv</em><sub>2,x</sub>) gates the X-truss
-          pickets beneath the deck.
-        </p>
-      </section>
-
-      <section>
-        <h2>7. Vignette</h2>
-        <p>The post pass multiplies the scene colour by</p>
-        <p class="formula">
-          V(u, v) = &frac12; +
-          &frac12;&thinsp;[16&thinsp;u&thinsp;v&thinsp;(1&minus;u)&thinsp;(1&minus;v)]<sup>0.2</sup>.
-        </p>
-        <p>
-          The polynomial 16&thinsp;<em>u</em>&thinsp;<em>v</em>&thinsp;(1&minus;<em>u</em>)&thinsp;(1&minus;<em>v</em>)
-          is separable, equal to 1 at the centre (&frac12;,&nbsp;&frac12;)
-          and 0 on the borders. Raising it to the power 0.2 flattens the
-          central plateau and concentrates the falloff near the edges; the
-          affine envelope &frac12; + &frac12;(&middot;) caps the maximum
-          darkening at 50&thinsp;%, leaving the corners dimmed but not
-          black.
-        </p>
+        <div class="final-expression">
+          F(p,t) = V(p) [L<sub>bg</sub> ⊕ M<sub>bridge</sub> ⊕ M<sub>train</sub>
+          ⊕ L<sub>fg</sub> ⊕ S<sub>smoke</sub>]
+        </div>
+        <p class="notation">The operator ⊕ means that each term is drawn over the terms before it.</p>
       </section>
 
       <footer>
-        <p>
-          Shader after MDB, up in the cloud sea. 
-          (ShaderToy Ndc3zl); local WebGL2 host with two-pass
-          framebuffer rendering.
-        </p>
-        <p>
-          Soundtrack: Helmy Trianggara, <em>Bornean</em>
-          (Sape Dayak Kalimantan).
-        </p>
+        <p>Visual adapted from mdb’s <em>Up in the Cloud Sea</em> (ShaderToy Ndc3zl).</p>
+        <p>Soundtrack: Helmy Trianggara, <em>Bornean</em> (Sape Dayak Kalimantan).</p>
       </footer>
     </main>
     <script type="module" src="./main.js"></script>
+    <script type="module" src="./process-demos.js"></script>
   </body>
 </html>

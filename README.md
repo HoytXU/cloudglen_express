@@ -54,34 +54,31 @@ contract — `iResolution`, `iTime`, `iTimeDelta`, `iFrame`, `iMouse`,
 literal ShaderToy code wrapped by a `#version 300 es` header.
 
 ```
-                         ┌────────────── iChannel0 (1024² value-noise) ──────────┐
+                         ┌────────────── iChannel0 (1024² blue noise) ───────────┐
                          │                                                       │
                          ▼                                                       │
    ┌──────────────┐  scene.glsl  ┌──────────────┐  post.glsl  ┌──────────┐       │
    │ full-screen  │ ───────────► │  offscreen   │ ──────────► │  screen  │       │
    │   triangle   │              │ FBO (RGBA8)  │             │ default  │       │
    └──────────────┘              └──────────────┘             │   FBO    │       │
-                                        ▲                     └──────────┘       │
-                                        │                                        │
-                                  iChannel1 (1024² procedural "wash" texture) ───┘
+                                                              └──────────┘
 ```
 
 - **Pass 1 (`scene.glsl`)** renders into an `RGBA8` framebuffer sized to
   the canvas drawing buffer.
 - **Pass 2 (`post.glsl`)** reads pass 1 from `iChannel0` and applies a
   vignette into the default framebuffer.
-- The wash texture (`iChannel1`) is a one-time CPU-generated 1024×1024
-  warm-tinted gradient with hash-grain — used in pass 1 as a
-  blend-on-top color grade and conceptually available to pass 2 (it is
-  bound but `post.glsl` does not currently sample it).
+- Pass 1 samples the same 1024×1024 blue-noise texture used by the
+  reference implementation, with linear filtering, repeat wrapping, and
+  mipmaps.
 
 ## Mathematics
 
 ### Value noise
 
 `noise(x)` is a textured 2-D value noise. Per cell it reads four
-corner samples from `iChannel0` (a static random R8 texture, generated
-with a CPU xorshift32) and interpolates with **Perlin's quintic fade**:
+corner samples from `iChannel0` (the reference blue-noise texture) and
+interpolates with **Perlin's quintic fade**:
 
 \[
 u(f) = f^3\bigl(f(6f - 15) + 10\bigr), \qquad f = \mathrm{frac}(x).
@@ -214,19 +211,6 @@ multiplied masks:
 
 The trestle color is multiplied by `smoothstep(-0.08, 0.08, uv.y)` so
 it fades into the lower haze rather than sitting on a hard edge.
-
-### Color grade
-
-After the scene composes (background → train → foreground), the result
-is mixed 30% with the wash texture:
-
-```glsl
-col = mix(col, texture(iChannel1, uv).rgb, 0.3);
-```
-
-The wash is CPU-baked (see `createWashTexture` in `main.js`) — a
-warm-tinted gradient with a soft sun-glow centered at uv ≈ (0.72, 0.68)
-plus deterministic per-pixel grain. Effectively a fixed LUT-on-top.
 
 ### Post-process vignette
 

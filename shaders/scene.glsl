@@ -319,6 +319,6 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
     // Output to screen
     uv = fragCoord/iResolution.xy;
-    col = mix(col, texture(iChannel1, uv).rgb, 0.3);
+    // col = mix(col, texture(iChannel1, uv).rgb, 0.3);
     fragColor = vec4(col,1.0);
 }

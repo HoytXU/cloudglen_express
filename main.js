@@ -14,14 +14,9 @@ if (!gl) {
 
 const soundtrack = new Audio("./assets/soundtrack.mp3");
 soundtrack.loop = true;
-soundtrack.preload = "auto";
+soundtrack.preload = "metadata";
 
-let soundEnabled = true;
-
-function startSoundtrack() {
-  if (!soundEnabled) return;
-  soundtrack.play().catch(() => {});
-}
+let soundEnabled = false;
 
 const soundToggle = document.querySelector("#sound-toggle");
 soundToggle.addEventListener("click", () => {
@@ -32,6 +27,15 @@ soundToggle.addEventListener("click", () => {
     soundtrack.play().catch(() => {});
   } else {
     soundtrack.pause();
+  }
+});
+
+const fullscreenToggle = document.querySelector("#fullscreen-toggle");
+fullscreenToggle.addEventListener("click", () => {
+  if (document.fullscreenElement) {
+    document.exitFullscreen();
+  } else {
+    shaderCard.requestFullscreen().catch(() => {});
   }
 });
 
@@ -76,6 +80,15 @@ async function loadText(path) {
   const response = await fetch(path, { cache: "no-store" });
   if (!response.ok) throw new Error(`Failed to load ${path}: ${response.status}`);
   return response.text();
+}
+
+function loadImage(path) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.addEventListener("load", () => resolve(image), { once: true });
+    image.addEventListener("error", () => reject(new Error(`Failed to load ${path}`)), { once: true });
+    image.src = path;
+  });
 }
 
 function compileShader(type, source) {
@@ -123,41 +136,16 @@ function createTexture(width, height, data = null, filter = gl.LINEAR, wrap = gl
   return texture;
 }
 
-function createRandomTexture(size) {
-  const data = new Uint8Array(size * size * 4);
-  let seed = 0x12345678;
-  const rnd = () => {
-    seed ^= seed << 13;
-    seed ^= seed >>> 17;
-    seed ^= seed << 5;
-    return (seed >>> 0) & 255;
-  };
-  for (let i = 0; i < data.length; i += 4) {
-    const v = rnd();
-    data[i] = v;
-    data[i + 1] = v;
-    data[i + 2] = v;
-    data[i + 3] = 255;
-  }
-  return createTexture(size, size, data, gl.NEAREST, gl.REPEAT);
-}
-
-function createWashTexture(width, height) {
-  const data = new Uint8Array(width * height * 4);
-  for (let y = 0; y < height; y += 1) {
-    for (let x = 0; x < width; x += 1) {
-      const i = (y * width + x) * 4;
-      const u = x / (width - 1);
-      const v = y / (height - 1);
-      const glow = Math.max(0, 1 - Math.hypot(u - 0.72, v - 0.68) * 1.7);
-      const grain = ((x * 17 + y * 31) % 19) / 255;
-      data[i] = Math.min(255, 190 + glow * 62 + grain * 255);
-      data[i + 1] = Math.min(255, 112 + glow * 78 + grain * 180);
-      data[i + 2] = Math.min(255, 80 + glow * 56 + grain * 140);
-      data[i + 3] = 255;
-    }
-  }
-  return createTexture(width, height, data, gl.LINEAR, gl.REPEAT);
+function createImageTexture(image) {
+  const texture = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, texture);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, image);
+  gl.generateMipmap(gl.TEXTURE_2D);
+  return texture;
 }
 
 function createTarget(width, height) {
@@ -171,15 +159,15 @@ function createTarget(width, height) {
   return { texture, framebuffer, width, height };
 }
 
-const [sceneText, postText] = await Promise.all([
+const [sceneText, postText, noiseImage] = await Promise.all([
   loadText("./shaders/scene.glsl"),
   loadText("./shaders/post.glsl"),
+  loadImage("./assets/blue-noise.png"),
 ]);
 
 const scene = createProgram(wrapShadertoy(sceneText));
 const post = createProgram(wrapShadertoy(postText));
-const noiseTexture = createRandomTexture(1024);
-const washTexture = createWashTexture(1024, 1024);
+const noiseTexture = createImageTexture(noiseImage);
 const vao = gl.createVertexArray();
 const mouse = [0, 0, 0, 0];
 
@@ -241,14 +229,12 @@ function render(timeMs) {
   gl.viewport(0, 0, target.width, target.height);
   setCommonUniforms(scene, now, delta);
   bindTexture(0, noiseTexture, scene.uniforms.iChannel0);
-  bindTexture(1, washTexture, scene.uniforms.iChannel1);
   gl.drawArrays(gl.TRIANGLES, 0, 3);
 
   gl.bindFramebuffer(gl.FRAMEBUFFER, null);
   gl.viewport(0, 0, canvas.width, canvas.height);
   setCommonUniforms(post, now, delta);
   bindTexture(0, target.texture, post.uniforms.iChannel0);
-  bindTexture(1, washTexture, post.uniforms.iChannel1);
   gl.drawArrays(gl.TRIANGLES, 0, 3);
 
   frame += 1;
@@ -276,7 +262,9 @@ canvas.addEventListener("pointermove", (event) => {
 
 window.addEventListener("resize", resize);
 document.addEventListener("fullscreenchange", () => {
-  document.body.classList.toggle("shader-fullscreen", document.fullscreenElement === shaderCard);
+  const isFullscreen = document.fullscreenElement === shaderCard;
+  document.body.classList.toggle("shader-fullscreen", isFullscreen);
+  fullscreenToggle.textContent = isFullscreen ? "Exit fullscreen" : "Enter fullscreen";
   resize();
 });
 window.addEventListener("keydown", (event) => {
@@ -289,7 +277,4 @@ window.addEventListener("keydown", (event) => {
     }
   }
 });
-window.addEventListener("pointerdown", startSoundtrack, { once: true });
-window.addEventListener("keydown", startSoundtrack, { once: true });
-startSoundtrack();
 requestAnimationFrame(render);
