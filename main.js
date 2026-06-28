@@ -159,13 +159,14 @@ function createTarget(width, height) {
   return { texture, framebuffer, width, height };
 }
 
-const [sceneText, postText, noiseImage] = await Promise.all([
+const [commonText, sceneText, postText, noiseImage] = await Promise.all([
+  loadText("./shaders/common.glsl"),
   loadText("./shaders/scene.glsl"),
   loadText("./shaders/post.glsl"),
   loadImage("./assets/blue-noise.png"),
 ]);
 
-const scene = createProgram(wrapShadertoy(sceneText));
+const scene = createProgram(wrapShadertoy(`${commonText}\n${sceneText}`));
 const post = createProgram(wrapShadertoy(postText));
 const noiseTexture = createImageTexture(noiseImage);
 const vao = gl.createVertexArray();

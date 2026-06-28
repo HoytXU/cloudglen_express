@@ -48,9 +48,11 @@ cloudglen_express/
 ├── index.html                 article, equations, controls, and references
 ├── style.css                  academic page layout and bounded canvas sizing
 ├── main.js                    final two-pass WebGL2 renderer and audio control
-├── process-demos.js           five small explanatory WebGL2 shaders
+├── process-demos.js           shared debug renderer for the five figures
 ├── shaders/
-│   ├── scene.glsl             clouds, train, smoke, and bridge
+│   ├── common.glsl            production functions shared by scene and figures
+│   ├── debug.glsl             intermediate-output debug modes
+│   ├── scene.glsl             final clouds and ordered composition
 │   └── post.glsl              vignette pass
 └── assets/
     ├── blue-noise.png         1024 × 1024 scalar source texture
@@ -63,13 +65,13 @@ The final image uses two fragment passes and one full-screen triangle. No
 vertex buffer or scene geometry is required.
 
 ```text
-blue-noise texture
-        │
-        ▼
-scene.glsl ──► RGBA8 offscreen framebuffer ──► post.glsl ──► canvas
+blue-noise texture ──► common.glsl
+                         ├──► scene.glsl ──► framebuffer ──► post.glsl
+                         └──► debug.glsl ──► explanatory figures
 ```
 
-1. `scene.glsl` samples `iChannel0` to construct textured value noise.
+1. `common.glsl` samples `iChannel0` to construct textured value noise for both
+   the final scene and debug figures.
 2. Eight normalized noise octaves form the cloud boundaries.
 3. The shader evaluates those boundaries at different offsets and speeds to
    produce layered parallax.
@@ -85,16 +87,17 @@ cost on dense displays.
 
 ## Explanatory figures
 
-`process-demos.js` contains independent, simplified shaders rather than cropped
-frames from the final render:
+`process-demos.js` compiles one debug shader with the same `common.glsl` module
+and blue-noise texture as the final renderer. A debug-mode uniform selects the
+intermediate output for each figure:
 
 | Figure | Isolated idea |
 | --- | --- |
 | Value noise | Smooth interpolation between random lattice values |
-| Cloud boundary | Three weighted and normalized noise scales |
-| Layers | Distance-dependent horizontal motion and occlusion |
-| Train and bridge | Unions of analytic masks and repeated coordinates |
-| Smoke | A noisy square-root centreline with a changing width |
+| Octaves | Three production-noise scales and their normalized sum |
+| Layers | Exact isolated production cloud masks at four distances |
+| Train and bridge | Exact cropped production masks |
+| Smoke | Exact production noise field and nested smoke masks |
 
 The figures are rendered only while visible. Their drawing buffers are resized
 from their bounded CSS boxes, so embedding the page under a different domain or
@@ -112,6 +115,8 @@ Useful checks after deployment:
 
 ```text
 ./shaders/scene.glsl       returns shader text
+./shaders/common.glsl      returns shader text
+./shaders/debug.glsl       returns shader text
 ./shaders/post.glsl        returns shader text
 ./assets/blue-noise.png    returns a PNG
 ./assets/soundtrack.mp3    returns audio

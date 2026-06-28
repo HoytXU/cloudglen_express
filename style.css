@@ -384,6 +384,15 @@ p { margin: 0 0 12px; }
   aspect-ratio: 1;
 }
 
+.layer-study {
+  grid-template-columns: minmax(320px, 1fr) minmax(300px, 1fr);
+}
+
+.layer-study .visual-panel {
+  height: auto;
+  aspect-ratio: 1;
+}
+
 .octave-label {
   position: absolute;
   z-index: 1;
@@ -399,16 +408,22 @@ p { margin: 0 0 12px; }
 .octave-2 { top: calc(50% + 8px); left: 9px; }
 .octave-sum { top: calc(50% + 8px); left: calc(50% + 9px); }
 
-.figure-key {
+.panel-label {
   position: absolute;
   z-index: 1;
-  top: 9px;
-  left: 10px;
-  padding: 2px 5px;
-  color: #333;
+  padding: 2px 4px;
+  color: #222;
   background: rgb(255 255 255 / 82%);
-  font: 0.68rem/1.25 Georgia, "Times New Roman", serif;
+  font: 0.64rem/1.2 Georgia, "Times New Roman", serif;
+  white-space: nowrap;
 }
+
+.panel-tl { top: 8px; left: 9px; }
+.panel-tr { top: 8px; left: calc(50% + 9px); }
+.panel-bl { top: calc(50% + 8px); left: 9px; }
+.panel-br { top: calc(50% + 8px); left: calc(50% + 9px); }
+.panel-left { top: 8px; left: 9px; }
+.panel-right { top: 8px; left: calc(50% + 9px); }
 
 .study-text {
   display: flex;
@@ -514,6 +529,7 @@ body.shader-fullscreen .shader-card #gl { width: 100vw; height: 100vh; aspect-ra
   .interpolation-grid { grid-template-columns: 1fr; }
   .noise-study { grid-template-columns: 1fr; }
   .octave-study { grid-template-columns: 1fr; }
+  .layer-study { grid-template-columns: 1fr; }
   .concept-figure { overflow-x: auto; }
   .concept-figure svg { width: 620px; max-width: none; }
 }

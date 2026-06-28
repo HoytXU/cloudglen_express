@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="A progressive GLSL study of procedural clouds, parallax, and silhouette composition.">
     <title>Cloudglen Express</title>
-    <link rel="stylesheet" href="./style.css?v=20260629-4">
+    <link rel="stylesheet" href="./style.css?v=20260629-6">
   </head>
   <body>
     <main class="page">
@@ -32,6 +32,9 @@
         descriptive subscripts are upright. The symbol <i>t</i> is reserved for time.
         Here ℝ denotes the real numbers, ℝ² denotes pairs of real numbers,
         <i>∈</i> means “belongs to,” and [0,1] includes every value from 0 to 1.
+        Every live figure compiles the same production functions from
+        <code>common.glsl</code> and samples the same blue-noise texture as the
+        final scene; only the displayed intermediate and crop change.
       </p>
 
       <section aria-labelledby="noise-title">
@@ -223,9 +226,8 @@
           horizontal blends along the bottom and top rows. Their vertical blend
           is the final value <i>N(<span class="vec">p</span>)</i>. The production
           shader reads its corner samples from a blue-noise texture
-          <a class="ref-mark" href="#ref-blue-noise">[4]</a>; the teaching
-          heatmap uses a deterministic hash to provide the same kind of scalar
-          corner data without requiring that texture.
+          <a class="ref-mark" href="#ref-blue-noise">[4]</a>; the heatmap uses
+          that same texture and the same production <i>N</i> function.
         </p>
         <p>
           The visual below samples the square region <i>[0,4]²</i>. Each image
@@ -260,11 +262,19 @@
               <span class="func">N</span>(<span class="vec">p</span>) =
               <span class="func">L</span>(b<sub>0</sub>,b<sub>1</sub>;w<sub>2</sub>)
             </p>
-            <pre><code><span class="code-type">vec2</span> f = fract(p);
-<span class="code-type">vec2</span> u = f*f*f*(f*(f*<span class="code-number">6.0</span>-<span class="code-number">15.0</span>)+<span class="code-number">10.0</span>);
+            <pre><code><span class="code-type">vec2</span> xi = fract(x);
+<span class="code-type">vec2</span> w = xi*xi*xi
+  * (xi*(xi*<span class="code-number">6.0</span>-<span class="code-number">15.0</span>)+<span class="code-number">10.0</span>);
+<span class="code-type">vec2</span> cell = floor(x);
 
-<span class="code-type">return</span> mix(mix(a, b, u.x),
-           mix(c, d, u.x), u.y);</code></pre>
+<span class="code-type">float</span> v00 = latticeSample(cell + <span class="code-type">vec2</span>(<span class="code-number">0</span>,<span class="code-number">0</span>));
+<span class="code-type">float</span> v10 = latticeSample(cell + <span class="code-type">vec2</span>(<span class="code-number">1</span>,<span class="code-number">0</span>));
+<span class="code-type">float</span> v01 = latticeSample(cell + <span class="code-type">vec2</span>(<span class="code-number">0</span>,<span class="code-number">1</span>));
+<span class="code-type">float</span> v11 = latticeSample(cell + <span class="code-type">vec2</span>(<span class="code-number">1</span>,<span class="code-number">1</span>));
+
+<span class="code-type">return</span> v00 + (v10-v00)*w.x
+  + (v01-v00)*w.y
+  + (v00-v10-v01+v11)*w.x*w.y;</code></pre>
           </div>
         </div>
       </section>
@@ -367,63 +377,65 @@
         <p class="step">3</p>
         <h2 id="depth-title">Layers and parallax</h2>
         <p>
-          Let <i>x</i> denote horizontal image position and let <i>t</i> denote
-          nonnegative time. The subscript <i>i</i> identifies one cloud layer,
-          and <i>d<sub>i</sub></i> is that layer’s positive apparent-distance
-          parameter. Its horizontal displacement is written
-          <i>&Delta;x<sub>i</sub>(t)</i>; the capital Greek letter &Delta; denotes
-          a change in position. Negative displacement denotes motion to the left.
+          Let <span class="vec">p</span>=(<i>p<sub>1</sub>,p<sub>2</sub></i>) be the
+          height-normalized scene coordinate used by the production shader, and
+          let <i>t=4t</i><sub class="label">shader</sub>, where
+          <i>t</i><sub class="label">shader</sub> is the WebGL uniform
+          <code>iTime</code>. The subscript <i>i</i> identifies
+          a cloud layer. Each layer has a positive apparent distance
+          <i>d<sub>i</sub></i> and a horizontal phase <i>&phi;<sub>i</sub></i>.
         </p>
         <p class="small-equation">
           &Delta;x<sub>i</sub>(t) = −t/d<sub>i</sub>, &nbsp;
           d&Delta;x<sub>i</sub>/dt = −1/d<sub>i</sub>
         </p>
         <p>
-          Consequently, the speed magnitude is <i>1/d<sub>i</sub></i>: large
-          <i>d<sub>i</sub></i> gives slow motion and small <i>d<sub>i</sub></i>
-          gives fast motion. This
-          distance-dependent motion is the parallax cue used by the scene. The
-          derivative <i>d&Delta;x<sub>i</sub>/dt</i> denotes displacement change
-          per unit time—that is, signed apparent velocity.
+          The shader samples at <i>p<sub>1</sub>+t/d<sub>i</sub></i>; therefore a
+          fixed feature appears at <i>p<sub>1</sub>=
+          constant−t/d<sub>i</sub></i> and moves left. Its speed magnitude is
+          <i>1/d<sub>i</sub></i>, so distant layers move more slowly.
         </p>
         <p>
-          The shader samples at <i>x−&Delta;x<sub>i</sub>(t)=x+t/d<sub>i</sub></i>,
-          so a left-moving feature is generated by a right-moving lookup point.
-          To sample layer <i>i</i>, <i>&lambda;<sub>i</sub></i> sets horizontal
-          frequency, <i>&phi;<sub>i</sub></i> adds a phase offset, and
-          <i>&eta;<sub>i</sub></i> selects a fixed vertical coordinate in the noise
-          field. The scalar <i>q<sub>i</sub></i> is the resulting horizontal
-          coordinate, while <span class="vec">q</span><sub>i</sub> is the complete
-          two-dimensional sampling position. The scalar <i>z<sub>i</sub></i> is the
-          field value sampled there. Finally, <i>m<sub>i</sub></i> is mean height,
-          <i>A<sub>i</sub></i> is vertical amplitude, and
-          <i>h<sub>i</sub>(x,t)</i> denotes the final layer height.
-          The teaching visual fixes <i>&eta;<sub>i</sub>=1.7</i> for every layer.
+          Define the exact production lookup position
+          <span class="vec">q</span><sub>i</sub>, field value <i>z<sub>i</sub></i>,
+          and binary layer mask <i>M<sub>i</sub></i> as shown below.
+          The parameters <i>m<sub>i</sub></i> and <i>A<sub>i</sub></i> are the
+          layer’s middle height and displacement amplitude. Both coordinates of
+          <span class="vec">p</span> enter the production noise field.
         </p>
         <p>
-          The subtraction of ½ centres the field around zero. Therefore
-          <i>A<sub>i</sub></i> determines the vertical displacement range and
-          <i>m<sub>i</sub></i> places that range at the required height. In the
-          visual, layers with <i>d=20,9,4,2</i> move at respective speeds
-          <i>1/20,1/9,1/4,1/2</i>; the smallest distance therefore moves fastest.
+          The four panels isolate the outer masks of actual background layers
+          c12, c11, c10, and c9 from the final shader. White is outside the mask
+          and black is inside.
+          Their distances are 10, 15, 20, and 25, so the animation directly shows
+          the decreasing speed <i>1/d<sub>i</sub></i>. The final scene evaluates
+          the same masks in order and assigns each one its production colours.
         </p>
-        <div class="study-panel">
+        <div class="study-panel layer-study">
           <figure class="visual-panel">
-            <canvas class="study-canvas" data-demo="layers" aria-label="Four cloud layers moving at distance-dependent speeds"></canvas>
-            <span class="figure-key">light <i>d=20</i> → dark <i>d=2</i></span>
+            <canvas class="study-canvas" data-demo="layers" aria-label="Four exact production cloud-layer masks at different apparent distances"></canvas>
+            <span class="panel-label panel-tl">c12 · <i>d=10</i></span>
+            <span class="panel-label panel-tr">c11 · <i>d=15</i></span>
+            <span class="panel-label panel-bl">c10 · <i>d=20</i></span>
+            <span class="panel-label panel-br">c9 · <i>d=25</i></span>
           </figure>
           <div class="study-text centered">
-            <p class="equation equation-large">
-              q<sub>i</sub>(x,t) = &lambda;<sub>i</sub>(x + t/d<sub>i</sub>) + &phi;<sub>i</sub><br>
-              <span class="vec">q</span><sub>i</sub>(x,t) = (q<sub>i</sub>(x,t), &eta;<sub>i</sub>)<br>
-              z<sub>i</sub>(x,t) = <span class="func">F</span><sub>3,0.7</sub>(<span class="vec">q</span><sub>i</sub>(x,t))<br>
-              h<sub>i</sub>(x,t) = m<sub>i</sub> + A<sub>i</sub>[z<sub>i</sub>(x,t) − ½]
+            <p class="equation equation-lines">
+              <span class="vec">q</span><sub>i</sub>(<span class="vec">p</span>,t) =
+              <span class="vec">p</span> + (t/d<sub>i</sub> + &phi;<sub>i</sub>,0)<br>
+              z<sub>i</sub>(<span class="vec">p</span>,t) =
+              <span class="func">F</span><sub>8,0.7</sub>(<span class="vec">q</span><sub>i</sub>(<span class="vec">p</span>,t))<br>
+              M<sub>i</sub>(<span class="vec">p</span>,t) =<br>
+              <span class="equation-indent">𝟙<sub>{p<sub>2</sub> &lt; m<sub>i</sub> + A<sub>i</sub>[z<sub>i</sub>(<span class="vec">p</span>,t)−½]}</sub></span>
             </p>
-            <pre><code><span class="code-type">float</span> q = frequency
-        * (x + time / distance)
-        + phase;
-<span class="code-type">return</span> middle + spread
-        * (cloudNoise(<span class="code-type">vec2</span>(q, <span class="code-number">1.7</span>)) - <span class="code-number">0.5</span>);</code></pre>
+            <pre><code><span class="code-type">vec2</span> q = p + <span class="code-type">vec2</span>(
+  time / distance + phase, <span class="code-number">0.0</span>
+);
+<span class="code-type">float</span> z = fbm(q, <span class="code-number">8</span>);
+<span class="code-type">float</span> boundary = middle
+  + amplitude * (z - <span class="code-number">0.5</span>);
+<span class="code-type">float</span> mask = <span class="code-number">1.0</span>
+  - step(boundary, p.y);</code></pre>
           </div>
         </div>
       </section>
@@ -434,68 +446,59 @@
         <p>
           A spatial mask <span class="func">M</span> assigns every point
           <span class="vec">p</span> in the two-dimensional image plane a number
-          from 0 to 1. This mapping is written
-          <i>M:ℝ²→[0,1]</i>. The values 0 and 1 represent exclusion and inclusion,
-          respectively; intermediate values represent partial edge coverage.
-          A binary disk of centre <span class="vec">c</span> and radius
-          <i>r&gt;0</i> is defined by the Euclidean distance
-          ‖<span class="vec">p</span>−<span class="vec">c</span>‖.
-          The symbol 𝟙 below is an indicator: it equals 1 when the condition in
-          its subscript is true and equals 0 otherwise.
+          from 0 to 1. The values 0 and 1 mean exclusion and inclusion. The
+          production train is assembled from rectangle masks, repeated wagon
+          masks, and hard circular wheel masks. The symbol 𝟙 denotes an indicator:
+          it returns 1 when its subscript condition is true and 0 otherwise.
         </p>
         <p class="small-equation">
-          <span class="func">M</span><sub class="label">disk</sub>(<span class="vec">p</span>) =
-          𝟙<sub>{‖<span class="vec">p</span>−<span class="vec">c</span>‖ &lt; r}</sub>
+          <span class="func">M</span><sub class="label">wheel</sub>(<span class="vec">p</span>) =
+          𝟙<sub>{‖<span class="vec">p</span>−<span class="vec">c</span>‖² &lt; r²}</sub>
         </p>
         <p>
-          The teaching shader replaces the hard disk boundary with a transition
-          of width <i>&epsilon; &gt; 0</i>. Rectangular indicator functions form the
-          body and chimney, while <code>fract(k u.x)</code> maps every horizontal
-          interval of length <i>1/k</i> to [0,1), thereby repeating carriages and
-          bridge spans. In this code expression, <code>u.x</code> is normalized
-          horizontal position and <i>k</i> is the positive repetition count.
+          The operation <span class="operator">fract</span>(9<span class="vec">p</span>)
+          repeats local coordinates every <i>1/9</i> scene units, allowing one
+          wagon and wheel pattern to generate the complete train. The combined
+          train mask is the pointwise maximum of its component masks, which is
+          their set-theoretic union.
         </p>
         <p>
-          The function <span class="operator">smoothstep</span>(<i>r,r+&epsilon;,d</i>)
-          equals 0 for <i>d≤r</i>, equals 1 for <i>d≥r+&epsilon;</i>, and changes
-          smoothly between them. Subtracting it from 1 gives an antialiased disk.
-          The pointwise maximum of several binary masks is their union: the
-          combined mask equals 1 whenever any component mask equals 1.
+          The bridge function in the source shader computes a keep mask
+          <i>K<sub>B</sub></i>: it equals 1 where the existing scene colour is
+          preserved and 0 where bridge colour is inserted. Therefore the bridge
+          inclusion mask is <i>M<sub>B</sub>=1−K<sub>B</sub></i>.
         </p>
         <p>
-          The visual displays mask values directly: black is 0 and white is 1.
-          The production shader keeps wagon, roof, locomotive, chimney, wheel,
-          and bridge masks separate so that their colours can be assigned later.
-          Its small final-render wheels use a hard squared-distance test; the
-          smoother disk below is retained only to make the mask boundary visible.
+          Both panels call the same shared mask functions as the final renderer.
+          The left panel crops and enlarges the exact train mask; the right panel
+          shows the exact moving bridge mask. Black is 0 and white is 1. The final
+          shader applies colours only after these masks have been evaluated. In
+          the maximum below, every component mask is evaluated at the same
+          position <span class="vec">p</span>; those repeated arguments are omitted.
         </p>
         <div class="study-panel">
           <figure class="visual-panel">
             <canvas class="study-canvas" data-demo="train" aria-label="Binary train and bridge masks, with white indicating inclusion"></canvas>
-            <span class="figure-key">mask value: black 0 · white 1</span>
+            <span class="panel-label panel-left">exact train mask</span>
+            <span class="panel-label panel-right">exact bridge mask</span>
           </figure>
           <div class="study-text">
             <p class="equation equation-lines">
-              <span class="func">M</span><sub class="label">wheel</sub>(<span class="vec">p</span>) = 1 −
-              <span class="operator">smoothstep</span>(<br>
-              <span class="equation-indent">r, r + &epsilon;,
-              ‖<span class="vec">p</span>−<span class="vec">c</span>‖)</span><br>
               <span class="func">M</span><sub class="label">train</sub>(<span class="vec">p</span>) =
               <span class="operator">max</span>(<br>
-              <span class="equation-indent">M<sub class="label">body</sub>(<span class="vec">p</span>),
-              M<sub class="label">chimney</sub>(<span class="vec">p</span>),</span><br>
-              <span class="equation-indent">M<sub class="label">wheels</sub>(<span class="vec">p</span>))</span><br>
-              M<sub class="label">combined</sub>(<span class="vec">p</span>) =
-              <span class="operator">max</span>(<br>
-              <span class="equation-indent">M<sub class="label">train</sub>(<span class="vec">p</span>),
-              M<sub class="label">bridge</sub>(<span class="vec">p</span>))</span>
+              <span class="equation-indent">M<sub class="label">wagon</sub>,M<sub class="label">join</sub>,M<sub class="label">roof</sub>,</span><br>
+              <span class="equation-indent">M<sub class="label">locomotive</sub>,M<sub class="label">locomotive roof</sub>,</span><br>
+              <span class="equation-indent">M<sub class="label">chimney</sub>,M<sub class="label">wheels</sub>)</span><br>
+              <span class="func">M</span><sub class="label">B</sub>(<span class="vec">p</span>,t) =
+              1−K<sub class="label">B</sub>(<span class="vec">p</span>,t)
             </p>
-            <pre><code><span class="code-type">float</span> wheel = <span class="code-number">1.0</span> - smoothstep(
-  radius, radius + <span class="code-number">0.004</span>,
-  length(uv - center)
-);
-<span class="code-type">float</span> train = max(max(body, chimney), wheels);
-<span class="code-type">float</span> combined = max(train, bridge);</code></pre>
+            <pre><code><span class="code-type">TrainMasks</span> parts =
+  productionTrainMasks(p);
+<span class="code-type">float</span> train =
+  productionTrainCombinedMask(parts);
+
+<span class="code-type">float</span> bridge = <span class="code-number">1.0</span>
+  - productionBridgeKeepMask(p, time);</code></pre>
           </div>
         </div>
       </section>
@@ -516,12 +519,12 @@
         <p>
           Let <i>&mu;(<span class="vec">p</span>,t)</i> denote the plume’s centre
           height and let <i>&delta;(&rho;)</i> denote its half-width. The smoke mask
-          <span class="func">M</span><sub class="label">S</sub> equals 1 precisely
-          when the pixel height <i>p<sub>2</sub></i> lies within that half-width.
+          is determined by the signed boundary function <i>D</i>: negative values
+          lie inside the plume and positive values lie outside.
         </p>
         <p class="small-equation">
-          <span class="func">M</span><sub class="label">S</sub>(<span class="vec">p</span>,t) =
-          𝟙<sub>{|p<sub>2</sub>−&mu;(<span class="vec">p</span>,t)| &lt; &delta;(&rho;)}</sub>
+          <span class="func">D</span>(<span class="vec">p</span>,t) =
+          |p<sub>2</sub>−&mu;(<span class="vec">p</span>,t)|−&delta;(&rho;)
         </p>
         <p>
           The field <i>G(<span class="vec">p</span>,t)</i> denotes the moving
@@ -541,15 +544,21 @@
         <p>
           The half-width <i>&delta;(&rho;)=0.8&rho;e<sup>−10&rho;</sup></i> is zero at
           the source, reaches its maximum at <i>&rho;=0.1</i>, and then decreases.
-          In the visual, the gray region is the smoke mask, the dark centre curve
-          satisfies <i>p<sub>2</sub>=&mu;(<span class="vec">p</span>,t)</i>, and the
-          two boundaries satisfy
-          <i>p<sub>2</sub>=&mu;(<span class="vec">p</span>,t)±&delta;(&rho;)</i>.
+          The final shader uses two nested masks: <i>D&lt;0</i> selects the outer
+          smoke colour and <i>D&lt;−0.02</i> selects its darker interior.
+        </p>
+        <p>
+          Both panels call the production smoke functions. The left panel displays
+          the translated eight-octave field <i>G+0.55=F<sub>8,0.9</sub></i> as
+          grayscale. The right panel displays the exact outer and inner masks
+          produced from <i>D</i>. Thus it shows the direct sequence from noise
+          field to final smoke regions.
         </p>
         <div class="study-panel">
           <figure class="visual-panel">
             <canvas class="study-canvas" data-demo="smoke" aria-label="Construction of a curved procedural smoke plume"></canvas>
-            <span class="figure-key">gray: mask · dark: centre and boundary</span>
+            <span class="panel-label panel-left"><i>G+0.55</i> · noise field</span>
+            <span class="panel-label panel-right">production smoke masks</span>
           </figure>
           <div class="study-text">
             <p class="equation equation-lines">
@@ -560,8 +569,10 @@
               &mu;(<span class="vec">p</span>,t) =<br>
               <span class="equation-indent">0.16&radic;&rho; + 0.12 − 0.4<span class="func">G</span>(<span class="vec">p</span>,t)</span><br>
               &delta;(&rho;) = 0.8&rho;e<sup>−10&rho;</sup><br>
-              <span class="func">M</span><sub class="label">S</sub>(<span class="vec">p</span>,t) =
-              <br><span class="equation-indent">𝟙<sub>{|p<sub>2</sub>−&mu;(<span class="vec">p</span>,t)| &lt; &delta;(&rho;)}</sub></span>
+              <span class="func">D</span>(<span class="vec">p</span>,t) =
+              |p<sub>2</sub>−&mu;(<span class="vec">p</span>,t)|−&delta;(&rho;)<br>
+              M<sub class="label">outer</sub> = 𝟙<sub>{D&lt;0}</sub>, &nbsp;
+              M<sub class="label">inner</sub> = 𝟙<sub>{D&lt;−0.02}</sub>
             </p>
           </div>
         </div>
@@ -594,27 +605,20 @@
           <a class="ref-mark" href="#ref-shadertoy">[1]</a>.
         </p>
         <p>
-          The colour vectors <span class="vec">c</span><sub class="label">bg</sub>,
-          <span class="vec">c</span><sub class="label">T</sub>,
-          <span class="vec">c</span><sub class="label">S</sub>, and
-          <span class="vec">c</span><sub class="label">B</sub> denote the
-          background, train, smoke, and bridge colours. Their masks are
-          <span class="func">M</span><sub class="label">T</sub>,
-          <span class="func">M</span><sub class="label">S</sub>, and
-          <span class="func">M</span><sub class="label">B</sub>.
-          The vector <span class="vec">c</span><sub class="label">fg</sub> and
-          scalar &alpha;<sub class="label">fg</sub> are the foreground colour and
-          opacity. The function <i>V</i>, defined below, is the vignette factor.
-          The vectors <span class="vec">c</span><sub>0</sub> through
-          <span class="vec">c</span><sub>3</sub> are intermediate colours after
-          successive compositing steps.
+          Let <i>J</i> be the number of ordered paint operations in the scene
+          pass. Operation <i>j</i> has source colour
+          <span class="vec">s</span><sub>j</sub> and mask <i>m<sub>j</sub></i>.
+          These operations include the separately coloured train components,
+          the two smoke regions, the inverse bridge keep mask, and the foreground
+          cloud opacity. The intermediate colour after operation <i>j</i> is
+          <span class="vec">c</span><sub>j</sub>.
         </p>
         <p>
           Every colour and mask in the recurrence below is evaluated at the same
           pixel and time; those arguments are omitted to keep the composition
-          legible. Train is placed over the background, smoke over the train,
-          bridge over the smoke, and foreground clouds last. The order matters:
-          a later layer replaces an earlier one wherever its mask equals 1.
+          legible. The order is exactly the sequence of <code>mix</code> calls and smoke
+          replacements in <code>scene.glsl</code>. A later operation replaces an
+          earlier colour wherever its mask equals 1.
         </p>
         <p>
           After compositing, <i>V:[0,1]²→[0.5,1]</i> applies the vignette. It equals
@@ -623,10 +627,10 @@
         </p>
         <div class="final-expression">
           <span class="vec">c</span><sub>0</sub> = <span class="vec">c</span><sub class="label">bg</sub><br>
-          <span class="vec">c</span><sub>1</sub> = <span class="operator">Blend</span>(<span class="vec">c</span><sub>0</sub>,<span class="vec">c</span><sub class="label">T</sub>;<span class="func">M</span><sub class="label">T</sub>)<br>
-          <span class="vec">c</span><sub>2</sub> = <span class="operator">Blend</span>(<span class="vec">c</span><sub>1</sub>,<span class="vec">c</span><sub class="label">S</sub>;<span class="func">M</span><sub class="label">S</sub>)<br>
-          <span class="vec">c</span><sub>3</sub> = <span class="operator">Blend</span>(<span class="vec">c</span><sub>2</sub>,<span class="vec">c</span><sub class="label">B</sub>;<span class="func">M</span><sub class="label">B</sub>)<br>
-          <span class="vec">c</span><sub class="label">scene</sub> = <span class="operator">Blend</span>(<span class="vec">c</span><sub>3</sub>,<span class="vec">c</span><sub class="label">fg</sub>;&alpha;<sub class="label">fg</sub>)<br>
+          <span class="vec">c</span><sub>j</sub> =
+          <span class="operator">Blend</span>(<span class="vec">c</span><sub>j−1</sub>,<span class="vec">s</span><sub>j</sub>;m<sub>j</sub>),
+          &nbsp; j=1,…,J<br>
+          <span class="vec">c</span><sub class="label">scene</sub> = <span class="vec">c</span><sub>J</sub><br>
           <span class="vec">c</span><sub class="label">out</sub>(<span class="vec">u</span>,t)
           = <span class="func">V</span>(<span class="vec">u</span>)<span class="vec">c</span><sub class="label">scene</sub>(<span class="vec">u</span>,t)
         </div>
@@ -673,7 +677,7 @@
         </p>
       </footer>
     </main>
-    <script type="module" src="./main.js"></script>
-    <script type="module" src="./process-demos.js?v=20260629-5"></script>
+    <script type="module" src="./main.js?v=20260629-2"></script>
+    <script type="module" src="./process-demos.js?v=20260629-7"></script>
   </body>
 </html>

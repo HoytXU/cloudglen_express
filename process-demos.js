@@ -1,212 +1,87 @@
 const vertexSource = `#version 300 es
 precision highp float;
-
 const vec2 positions[3] = vec2[3](
   vec2(-1.0, -1.0),
   vec2( 3.0, -1.0),
   vec2(-1.0,  3.0)
 );
-
 void main() {
   gl_Position = vec4(positions[gl_VertexID], 0.0, 1.0);
 }`;
 
-const fragmentPrelude = `#version 300 es
+const fragmentHeader = `#version 300 es
 precision highp float;
-
+precision highp sampler2D;
 out vec4 outColor;
 uniform vec2 uResolution;
 uniform float uTime;
-
-float hash(vec2 p) {
-  return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
-}
-
-float noise(vec2 p) {
-  vec2 cell = floor(p);
-  vec2 f = fract(p);
-  f = f * f * f * (f * (f * 6.0 - 15.0) + 10.0);
-
-  float a = hash(cell);
-  float b = hash(cell + vec2(1.0, 0.0));
-  float c = hash(cell + vec2(0.0, 1.0));
-  float d = hash(cell + vec2(1.0, 1.0));
-
-  return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
-}
-
-float cloudNoise(vec2 p) {
-  float shape = noise(p);
-  float detail = 0.7 * noise(2.0 * p);
-  float fine = 0.49 * noise(4.0 * p);
-  return (shape + detail + fine) / 2.19;
-}
-
-float smokeNoise(vec2 p) {
-  float sum = 0.0;
-  float weight = 0.0;
-  float amplitude = 1.0;
-  for (int k = 0; k < 8; k++) {
-    sum += amplitude * noise(p);
-    weight += amplitude;
-    p *= 2.0;
-    amplitude *= 0.9;
-  }
-  return sum / weight;
-}
-
+uniform int uDebugMode;
+uniform sampler2D iChannel0;
 `;
 
-const fragments = {
-  noise: `${fragmentPrelude}
-void main() {
-  vec2 uv = gl_FragCoord.xy / uResolution;
-  vec2 p = 4.0 * uv;
-  float n = noise(p);
-  vec3 color = vec3(n);
-
-  vec2 edgeDistance = min(fract(p), 1.0 - fract(p));
-  float grid = 1.0 - smoothstep(0.0, 0.018, min(edgeDistance.x, edgeDistance.y));
-  vec3 gridColor = n > 0.5 ? vec3(0.0) : vec3(1.0);
-  color = mix(color, gridColor, 0.28 * grid);
-
-  float aspect = uResolution.x / uResolution.y;
-  vec2 selected = vec2(2.65, 1.55) / 4.0;
-  vec2 delta = vec2((uv.x - selected.x) * aspect, uv.y - selected.y);
-  float ring = 1.0 - smoothstep(0.003, 0.009, abs(length(delta) - 0.025));
-  vec3 ringColor = noise(vec2(2.65, 1.55)) > 0.5 ? vec3(0.0) : vec3(1.0);
-  color = mix(color, ringColor, ring);
-  outColor = vec4(color, 1.0);
-}`,
-
-  detail: `${fragmentPrelude}
-void main() {
-  vec2 uv = gl_FragCoord.xy / uResolution;
-  bool right = uv.x >= 0.5;
-  bool top = uv.y >= 0.5;
-  vec2 local = fract(2.0 * uv);
-  vec2 p = 4.0 * local;
-
-  float scale = top ? (right ? 2.0 : 1.0) : 4.0;
-  float value = (!top && right) ? cloudNoise(p) : noise(scale * p);
-  vec3 color = vec3(value);
-
-  if (top || !right) {
-    vec2 lattice = scale * p;
-    vec2 edgeDistance = min(fract(lattice), 1.0 - fract(lattice));
-    float grid = 1.0 - smoothstep(0.0, 0.025, min(edgeDistance.x, edgeDistance.y));
-    vec3 gridColor = value > 0.5 ? vec3(0.0) : vec3(1.0);
-    color = mix(color, gridColor, 0.20 * grid);
-  }
-
-  float divider = max(
-    1.0 - smoothstep(0.0, 0.006, abs(uv.x - 0.5)),
-    1.0 - smoothstep(0.0, 0.006, abs(uv.y - 0.5))
-  );
-  color = mix(color, vec3(0.08), divider);
-  outColor = vec4(color, 1.0);
-}`,
-
-  layers: `${fragmentPrelude}
-float heightAt(float x, float time, float distance, float phase, float middle, float spread) {
-  float shape = cloudNoise(vec2(2.8 * (x + time / distance) + phase, 1.7));
-  return middle + spread * (shape - 0.5);
-}
-
-void main() {
-  vec2 uv = gl_FragCoord.xy / uResolution;
-  vec3 color = vec3(0.98);
-
-  float farY = heightAt(uv.x, uTime, 20.0, 1.0, 0.78, 0.55);
-  float middleY = heightAt(uv.x, uTime, 9.0, 4.2, 0.61, 0.62);
-  float nearY = heightAt(uv.x, uTime, 4.0, 7.4, 0.43, 0.75);
-  float frontY = heightAt(uv.x, uTime, 2.0, 11.0, 0.22, 0.9);
-
-  color = mix(color, vec3(0.86), 1.0 - smoothstep(farY - 0.008, farY + 0.008, uv.y));
-  color = mix(color, vec3(0.66), 1.0 - smoothstep(middleY - 0.008, middleY + 0.008, uv.y));
-  color = mix(color, vec3(0.44), 1.0 - smoothstep(nearY - 0.008, nearY + 0.008, uv.y));
-  color = mix(color, vec3(0.22), 1.0 - smoothstep(frontY - 0.008, frontY + 0.008, uv.y));
-  outColor = vec4(color, 1.0);
-}`,
-
-  smoke: `${fragmentPrelude}
-void main() {
-  vec2 uv = gl_FragCoord.xy / uResolution;
-
-  // Crop the production shader's coordinate system to the plume region.
-  vec2 p = vec2(0.55 * uv.x, 0.45 * uv.y);
-  float x = 0.49 - p.x;
-  float h = smokeNoise(p + vec2(0.16 * uTime + 3.5, 0.0)) - 0.55;
-  float center = 0.16 * sqrt(max(x, 0.0)) + 0.12 - 0.4 * h;
-  float width = 0.8 * x * exp(-10.0 * x);
-
-  float plume = (1.0 - smoothstep(width, width + 0.004, abs(p.y - center)))
-    * step(0.0, x);
-  float centerline = (1.0 - smoothstep(0.001, 0.0035, abs(p.y - center)))
-    * step(0.0, x);
-
-  float boundary = (1.0 - smoothstep(0.001, 0.0035,
-    abs(abs(p.y - center) - width))) * step(0.0, x);
-
-  vec3 color = vec3(0.98);
-  color = mix(color, vec3(0.72), 0.78 * plume);
-  color = mix(color, vec3(0.16), boundary);
-  color = mix(color, vec3(0.08), centerline);
-
-  float chimney = step(0.476, p.x) * step(p.x, 0.49)
-    * step(0.07, p.y) * step(p.y, 0.13);
-  color = mix(color, vec3(0.06), chimney);
-  outColor = vec4(color, 1.0);
-}`,
-
-  train: `${fragmentPrelude}
-float boxMask(vec2 p, vec2 center, vec2 halfSize) {
-  vec2 d = abs(p - center) - halfSize;
-  return 1.0 - step(0.0, max(d.x, d.y));
-}
-
-float circleMask(vec2 p, vec2 center, float radius) {
-  return 1.0 - smoothstep(radius, radius + 0.004, length(p - center));
-}
-
-void main() {
-  vec2 uv = gl_FragCoord.xy / uResolution;
-  vec3 color = vec3(0.03);
-
-  float deck = boxMask(uv, vec2(0.5, 0.265), vec2(0.5, 0.018));
-  float span = fract(uv.x * 4.0);
-  float support = (1.0 - smoothstep(0.025, 0.035, abs(span - 0.5)))
-    * step(0.05, uv.y) * (1.0 - step(0.265, uv.y));
-  float archY = 0.09 + 0.43 * (span - 0.5) * (span - 0.5);
-  float arch = (1.0 - smoothstep(0.008, 0.016, abs(uv.y - archY)))
-    * (1.0 - step(0.27, uv.y));
-  float bridge = max(deck, max(support, arch));
-
-  float body = boxMask(uv, vec2(0.49, 0.38), vec2(0.31, 0.07));
-  body = max(body, boxMask(uv, vec2(0.67, 0.455), vec2(0.1, 0.095)));
-  float chimney = boxMask(uv, vec2(0.76, 0.55), vec2(0.018, 0.075));
-  chimney = max(chimney, boxMask(uv, vec2(0.76, 0.63), vec2(0.035, 0.012)));
-  float wheels = 0.0;
-  wheels = max(wheels, circleMask(uv, vec2(0.25, 0.3), 0.045));
-  wheels = max(wheels, circleMask(uv, vec2(0.41, 0.3), 0.045));
-  wheels = max(wheels, circleMask(uv, vec2(0.59, 0.3), 0.048));
-  wheels = max(wheels, circleMask(uv, vec2(0.72, 0.3), 0.048));
-  float train = max(max(body, chimney), wheels);
-  float combined = max(bridge, train);
-  color = mix(color, vec3(0.98), combined);
-  outColor = vec4(color, 1.0);
-}`,
+const modeByName = {
+  noise: 1,
+  detail: 2,
+  layers: 3,
+  train: 4,
+  smoke: 5,
 };
+
+async function loadText(path) {
+  const response = await fetch(path, { cache: "no-store" });
+  if (!response.ok) throw new Error(`Failed to load ${path}: ${response.status}`);
+  return response.text();
+}
+
+function loadImage(path) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.addEventListener("load", () => resolve(image), { once: true });
+    image.addEventListener("error", () => reject(new Error(`Failed to load ${path}`)), { once: true });
+    image.src = path;
+  });
+}
 
 function compile(gl, type, source) {
   const shader = gl.createShader(type);
   gl.shaderSource(shader, source);
   gl.compileShader(shader);
   if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-    throw new Error(gl.getShaderInfoLog(shader) || "Study shader failed to compile");
+    throw new Error(gl.getShaderInfoLog(shader) || "Debug shader failed to compile");
   }
   return shader;
 }
+
+function createProgram(gl, fragmentSource) {
+  const program = gl.createProgram();
+  gl.attachShader(program, compile(gl, gl.VERTEX_SHADER, vertexSource));
+  gl.attachShader(program, compile(gl, gl.FRAGMENT_SHADER, fragmentSource));
+  gl.linkProgram(program);
+  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+    throw new Error(gl.getProgramInfoLog(program) || "Debug program failed to link");
+  }
+  return program;
+}
+
+function createNoiseTexture(gl, image) {
+  const texture = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, texture);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, image);
+  gl.generateMipmap(gl.TEXTURE_2D);
+  return texture;
+}
+
+const [commonSource, debugSource, noiseImage] = await Promise.all([
+  loadText("./shaders/common.glsl"),
+  loadText("./shaders/debug.glsl"),
+  loadImage("./assets/blue-noise.png"),
+]);
+
+const fragmentSource = `${fragmentHeader}\n${commonSource}\n${debugSource}`;
 
 function createStudy(canvas) {
   const gl = canvas.getContext("webgl2", {
@@ -217,20 +92,18 @@ function createStudy(canvas) {
   });
   if (!gl) return null;
 
-  const program = gl.createProgram();
-  gl.attachShader(program, compile(gl, gl.VERTEX_SHADER, vertexSource));
-  gl.attachShader(program, compile(gl, gl.FRAGMENT_SHADER, fragments[canvas.dataset.demo]));
-  gl.linkProgram(program);
-  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-    throw new Error(gl.getProgramInfoLog(program) || "Study shader failed to link");
-  }
-
+  const program = createProgram(gl, fragmentSource);
+  const texture = createNoiseTexture(gl, noiseImage);
   return {
     canvas,
     gl,
     program,
+    texture,
+    mode: modeByName[canvas.dataset.demo],
     resolution: gl.getUniformLocation(program, "uResolution"),
     time: gl.getUniformLocation(program, "uTime"),
+    debugMode: gl.getUniformLocation(program, "uDebugMode"),
+    channel0: gl.getUniformLocation(program, "iChannel0"),
     vao: gl.createVertexArray(),
     visible: true,
   };
@@ -253,16 +126,15 @@ const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 const start = performance.now();
 
 function render(time) {
-  const seconds = reduceMotion.matches ? 0 : (time - start) / 1000;
+  const seconds = reduceMotion.matches ? 0 : (time-start)/1000;
 
   for (const study of studies) {
     if (!study.visible) continue;
-
     const { canvas, gl } = study;
     const rect = canvas.getBoundingClientRect();
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    const width = Math.max(1, Math.round(rect.width * dpr));
-    const height = Math.max(1, Math.round(rect.height * dpr));
+    const width = Math.max(1, Math.round(rect.width*dpr));
+    const height = Math.max(1, Math.round(rect.height*dpr));
     if (canvas.width !== width || canvas.height !== height) {
       canvas.width = width;
       canvas.height = height;
@@ -273,6 +145,10 @@ function render(time) {
     gl.bindVertexArray(study.vao);
     gl.uniform2f(study.resolution, width, height);
     gl.uniform1f(study.time, seconds);
+    gl.uniform1i(study.debugMode, study.mode);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, study.texture);
+    gl.uniform1i(study.channel0, 0);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
   }
 
