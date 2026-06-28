@@ -131,6 +131,21 @@ p { margin: 0 0 12px; }
   white-space: nowrap;
 }
 
+.derivation-equation {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  white-space: normal;
+}
+
+.derivation-line {
+  display: block;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.derivation-line + .derivation-line { margin-top: 4px; }
+
 .figure-intro {
   margin: 14px 0 0;
   color: #555;
@@ -189,9 +204,80 @@ p { margin: 0 0 12px; }
 
 .paper-point { fill: #fff; stroke: #222; stroke-width: 1.5; }
 .paper-focus { fill: #222; stroke: #222; stroke-width: 1; }
-.interpolation-card svg .paper-symbol { font: italic 15px Georgia, "Times New Roman", serif; }
-.interpolation-card svg .paper-note { fill: #555; font: italic 13px Georgia, "Times New Roman", serif; }
-.interpolation-card svg .paper-formula { font: italic 14px Georgia, "Times New Roman", serif; }
+.paper-symbol { font: italic 15px Georgia, "Times New Roman", serif; }
+.paper-note { fill: #555; font: italic 13px Georgia, "Times New Roman", serif; }
+.paper-formula { font: italic 14px Georgia, "Times New Roman", serif; }
+
+.concept-figure {
+  margin: 18px 0 22px;
+}
+
+.concept-figure svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: #fff;
+}
+
+.concept-figure figcaption {
+  margin-top: 5px;
+  color: #333;
+  font: 0.78rem/1.4 Georgia, "Times New Roman", serif;
+  text-align: center;
+}
+
+.paper-heading {
+  fill: #222;
+  font: 600 13px Arial, sans-serif;
+  letter-spacing: 0.01em;
+}
+
+.paper-label {
+  fill: #333;
+  font: italic 13px Georgia, "Times New Roman", serif;
+}
+
+.paper-callout {
+  fill: #666;
+  font: 12px Arial, sans-serif;
+}
+
+.paper-boundary {
+  stroke: #d2d2d2;
+  stroke-width: 1;
+  stroke-dasharray: 3 4;
+}
+
+.paper-curve {
+  fill: none;
+  stroke: #333;
+  stroke-width: 1.7;
+}
+
+.paper-curve-strong { stroke-width: 2; }
+.paper-callout-line { stroke: #888; stroke-width: 0.9; }
+.paper-separator { stroke: #ddd; stroke-width: 1; }
+.paper-axis { stroke: #555; stroke-width: 1; }
+.paper-tangent { stroke: #777; stroke-width: 1.2; }
+
+.paper-grid line {
+  stroke: #aaa;
+  stroke-width: 1;
+}
+
+.paper-cell {
+  fill: #ededed;
+  stroke: #333;
+  stroke-width: 1.4;
+}
+
+.paper-arrow,
+.paper-dimension {
+  stroke: #666;
+  stroke-width: 1;
+}
+
+.paper-arrow-head { fill: #666; }
 
 .study-panel {
   display: grid;
@@ -206,7 +292,8 @@ p { margin: 0 0 12px; }
 .visual-panel {
   position: relative;
   min-width: 0;
-  height: 230px;
+  min-height: 230px;
+  height: auto;
   margin: 0;
   overflow: hidden;
   border-right: 1px solid #cfcfcf;
@@ -219,8 +306,7 @@ p { margin: 0 0 12px; }
   height: 100%;
 }
 
-.axis,
-.compare-label {
+.axis {
   position: absolute;
   z-index: 1;
   color: #4c5960;
@@ -229,10 +315,100 @@ p { margin: 0 0 12px; }
 
 .axis-y { top: 10px; left: 10px; }
 .axis-x { right: 10px; bottom: 8px; }
-.compare-label { top: 10px; padding: 2px 5px; background: rgb(255 255 255 / 75%); }
-.compare-left { left: 10px; }
-.compare-right { left: calc(50% + 10px); }
-.comparison::after { position: absolute; inset: 0 auto 0 50%; border-left: 1px solid rgb(70 80 85 / 35%); content: ""; }
+
+.noise-study {
+  grid-template-columns: minmax(320px, 1fr) minmax(300px, 1fr);
+}
+
+.noise-study .visual-panel {
+  height: auto;
+  aspect-ratio: 1;
+}
+
+.heatmap-title,
+.heatmap-axis,
+.heatmap-origin,
+.heatmap-xmax,
+.heatmap-ymax,
+.heatmap-point-label,
+.heatmap-scale-label,
+.heatmap-scale-name {
+  position: absolute;
+  z-index: 1;
+  color: #222;
+  font: 0.66rem/1.2 Arial, sans-serif;
+}
+
+.heatmap-title {
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 2px 4px;
+  background: rgb(255 255 255 / 78%);
+  white-space: nowrap;
+}
+
+.heatmap-axis-x { right: 13px; bottom: 15px; }
+.heatmap-axis-y { top: 17px; left: 14px; }
+.heatmap-origin { bottom: 3px; left: 4px; }
+.heatmap-xmax { right: 4px; bottom: 3px; }
+.heatmap-ymax { top: 3px; left: 4px; }
+.heatmap-point-label {
+  top: 57%;
+  left: 65%;
+  transform: translateX(-100%);
+  padding: 1px 3px;
+  background: rgb(255 255 255 / 78%);
+}
+
+.heatmap-scale {
+  position: absolute;
+  z-index: 1;
+  top: 22%;
+  right: 12px;
+  width: 9px;
+  height: 42%;
+  border: 1px solid rgb(0 0 0 / 55%);
+  background: linear-gradient(to top, #000, #fff);
+}
+
+.heatmap-scale-high { top: calc(22% - 2px); right: 25px; padding: 0 2px; background: rgb(255 255 255 / 78%); }
+.heatmap-scale-low { top: calc(64% - 9px); right: 25px; padding: 0 2px; color: #fff; background: rgb(0 0 0 / 72%); }
+.heatmap-scale-name { top: calc(22% - 17px); right: 12px; padding: 0 2px; background: rgb(255 255 255 / 78%); }
+.octave-study {
+  grid-template-columns: minmax(320px, 1fr) minmax(300px, 1fr);
+}
+
+.octave-study .visual-panel {
+  height: auto;
+  aspect-ratio: 1;
+}
+
+.octave-label {
+  position: absolute;
+  z-index: 1;
+  padding: 2px 4px;
+  color: #222;
+  background: rgb(255 255 255 / 82%);
+  font: 0.64rem/1.2 Georgia, "Times New Roman", serif;
+  white-space: nowrap;
+}
+
+.octave-0 { top: 8px; left: 9px; }
+.octave-1 { top: 8px; left: calc(50% + 9px); }
+.octave-2 { top: calc(50% + 8px); left: 9px; }
+.octave-sum { top: calc(50% + 8px); left: calc(50% + 9px); }
+
+.figure-key {
+  position: absolute;
+  z-index: 1;
+  top: 9px;
+  left: 10px;
+  padding: 2px 5px;
+  color: #333;
+  background: rgb(255 255 255 / 82%);
+  font: 0.68rem/1.25 Georgia, "Times New Roman", serif;
+}
 
 .study-text {
   display: flex;
@@ -257,6 +433,7 @@ p { margin: 0 0 12px; }
 
 .equation-large { font-size: 1.05rem; }
 .equation-lines { white-space: normal; }
+.equation-indent { display: inline-block; padding-left: 1.25em; }
 
 .fraction { display: inline-flex; flex-direction: column; align-items: center; vertical-align: middle; text-align: center; }
 .fraction > span:first-child { padding: 0 5px 2px; border-bottom: 1px solid currentColor; }
@@ -276,42 +453,11 @@ pre {
 code { font: inherit; }
 .code-type { color: #244f68; }
 .code-number { color: #536b34; }
-.symbols { margin: 0; color: #666; font-size: 0.84rem; }
-
-.explanation {
-  margin: 12px 2px 0;
-  color: #555;
-  font-size: 0.9rem;
-  line-height: 1.58;
-}
-
-.explanation code,
-.synthesis code,
-.math-notes code {
+.synthesis code {
   padding: 0 3px;
   color: #25343d;
   background: #f2f2f2;
   font: 0.82em "Courier New", Consolas, monospace;
-}
-
-.math-notes {
-  margin: 12px 2px 0;
-  padding: 12px 15px 4px;
-  border-left: 2px solid #c9d3d8;
-  color: #444;
-  background: #fafafa;
-  font-size: 0.88rem;
-  line-height: 1.58;
-}
-
-.math-notes p { margin-bottom: 8px; }
-
-.worked-equation {
-  overflow-x: auto;
-  color: #25343d;
-  font-size: 1rem;
-  font-style: italic;
-  white-space: nowrap;
 }
 
 .synthesis { padding-top: 28px; border-top: 1px solid #ddd; }
@@ -328,8 +474,6 @@ code { font: inherit; }
   text-align: center;
   white-space: nowrap;
 }
-
-.notation { color: #666; font-size: 0.82rem; text-align: center; }
 
 .vignette-equation {
   width: fit-content;
@@ -361,11 +505,15 @@ body.shader-fullscreen .shader-card #gl { width: 100vw; height: 100vh; aspect-ra
 @media (max-width: 720px) {
   .page { width: 92%; max-width: none; padding: 28px 0 48px; }
   .study-panel { grid-template-columns: 1fr; }
-  .visual-panel { height: 210px; border-right: 0; border-bottom: 1px solid #cfcfcf; }
+  .visual-panel { min-height: 210px; height: 210px; border-right: 0; border-bottom: 1px solid #cfcfcf; }
   .study-text { min-height: 0; }
   .study-text { padding: 18px; }
   .shader-controls { flex-wrap: wrap; }
   .shader-hint { width: 100%; margin: 2px 0 0; }
   .source-line { margin-top: -28px; }
   .interpolation-grid { grid-template-columns: 1fr; }
+  .noise-study { grid-template-columns: 1fr; }
+  .octave-study { grid-template-columns: 1fr; }
+  .concept-figure { overflow-x: auto; }
+  .concept-figure svg { width: 620px; max-width: none; }
 }

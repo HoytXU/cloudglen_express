@@ -129,8 +129,8 @@ WebGL canvas.
   This is the original visual design and GLSL composition adapted here.
 - **Quintic fade:** Ken Perlin,
   [Improved Noise reference implementation](https://cs.nyu.edu/~perlin/noise/).
-  The project reuses the fade polynomial while implementing value noise rather
-  than Perlin's gradient noise.
+  The project uses this polynomial to smooth the interpolation weights in its
+  value-noise field.
 - **Octave-based procedural functions:** F. Kenton Musgrave, Craig E. Kolb, and
   Robert S. Mace,
   [*The Synthesis and Rendering of Eroded Fractal Terrains*](https://dl.acm.org/doi/10.1145/74333.74335),
