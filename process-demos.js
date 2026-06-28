@@ -25,6 +25,7 @@ const modeByName = {
   layers: 3,
   train: 4,
   smoke: 5,
+  composition: 6,
 };
 
 async function loadText(path) {

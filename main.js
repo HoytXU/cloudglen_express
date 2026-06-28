@@ -167,7 +167,7 @@ const [commonText, sceneText, postText, noiseImage] = await Promise.all([
 ]);
 
 const scene = createProgram(wrapShadertoy(`${commonText}\n${sceneText}`));
-const post = createProgram(wrapShadertoy(postText));
+const post = createProgram(wrapShadertoy(`${commonText}\n${postText}`));
 const noiseTexture = createImageTexture(noiseImage);
 const vao = gl.createVertexArray();
 const mouse = [0, 0, 0, 0];

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="A progressive GLSL study of procedural clouds, parallax, and silhouette composition.">
     <title>Cloudglen Express</title>
-    <link rel="stylesheet" href="./style.css?v=20260629-6">
+    <link rel="stylesheet" href="./style.css?v=20260629-9">
   </head>
   <body>
     <main class="page">
@@ -29,7 +29,7 @@
 
       <section aria-labelledby="noise-title">
         <p class="step">1</p>
-        <h2 id="noise-title">A continuous random line</h2>
+        <h2 id="noise-title">Interpolation</h2>
         <p>
           Let <i>a</i> and <i>b</i> be two real numbers. Let <i>&tau;</i> (Greek
           “tau”) be a parameter between 0 and 1 that measures progress from
@@ -252,26 +252,19 @@
               <span class="func">N</span>(<span class="vec">p</span>) =
               <span class="func">L</span>(b<sub>0</sub>,b<sub>1</sub>;w<sub>2</sub>)
             </p>
-            <pre><code><span class="code-type">vec2</span> xi = fract(x);
+            <pre><code><span class="code-type">vec2</span> xi = fract(p);
 <span class="code-type">vec2</span> w = xi*xi*xi
   * (xi*(xi*<span class="code-number">6.0</span>-<span class="code-number">15.0</span>)+<span class="code-number">10.0</span>);
-<span class="code-type">vec2</span> cell = floor(x);
-
-<span class="code-type">float</span> v00 = latticeSample(cell + <span class="code-type">vec2</span>(<span class="code-number">0</span>,<span class="code-number">0</span>));
-<span class="code-type">float</span> v10 = latticeSample(cell + <span class="code-type">vec2</span>(<span class="code-number">1</span>,<span class="code-number">0</span>));
-<span class="code-type">float</span> v01 = latticeSample(cell + <span class="code-type">vec2</span>(<span class="code-number">0</span>,<span class="code-number">1</span>));
-<span class="code-type">float</span> v11 = latticeSample(cell + <span class="code-type">vec2</span>(<span class="code-number">1</span>,<span class="code-number">1</span>));
-
-<span class="code-type">return</span> v00 + (v10-v00)*w.x
-  + (v01-v00)*w.y
-  + (v00-v10-v01+v11)*w.x*w.y;</code></pre>
+<span class="code-type">float</span> bottom = mix(v00, v10, w.x);
+<span class="code-type">float</span> top = mix(v01, v11, w.x);
+<span class="code-type">return</span> mix(bottom, top, w.y);</code></pre>
           </div>
         </div>
       </section>
 
       <section aria-labelledby="cloud-title">
         <p class="step">2</p>
-        <h2 id="cloud-title">Adding detail with octaves</h2>
+        <h2 id="cloud-title">Octaves</h2>
         <p>
           Let <span class="func">N</span><i>:ℝ²→[0,1]</i> be the value-noise field from Section 1. A
           single evaluation scale contains broad variation but little fine
@@ -280,6 +273,17 @@
           Write <span class="func">F</span><sub>3,0.7</sub> for the normalized
           combination of three such scales; the subscript records three scales
           and an amplitude multiplier of 0.7.
+        </p>
+        <p>
+          Start with only two octaves. The first field supplies broad variation;
+          the second evaluates the same function at twice the spatial frequency
+          and contributes with relative weight <i>g</i>. Division by <i>1+g</i>
+          keeps the result in the original numerical range.
+        </p>
+        <p class="small-equation">
+          <span class="func">F</span><sub>2,g</sub>(<span class="vec">p</span>) =
+          [<span class="func">N</span>(<span class="vec">p</span>) +
+          g<span class="func">N</span>(2<span class="vec">p</span>)]/(1+g)
         </p>
         <p class="small-equation derivation-equation">
           <span class="derivation-line">
@@ -320,30 +324,30 @@
           between 0 and 1 whenever <i>N(<span class="vec">p</span>)</i> does.
         </p>
         <p>
-          The code implements these symbols iteratively. At the beginning of
-          iteration <i>k</i>, <code>amplitude</code> equals <i>g<sup>k</sup></i>
-          and the mutated <code>p</code> equals <i>2<sup>k</sup><span class="vec">p</span><sub>0</sub></i>,
-          where <span class="vec">p</span><sub>0</sub> is the original input.
-          <code>sum</code> accumulates the numerator, <code>weight</code>
-          accumulates the denominator, and the final division performs the
-          normalization.
+          The loop mirrors the formula: <code>p *= 2</code> produces
+          <i>2<sup>k</sup><span class="vec">p</span></i>,
+          <code>amplitude *= gain</code> produces <i>g<sup>k</sup></i>, and
+          <code>sum / weight</code> performs the normalization.
         </p>
         <p>
-          The four heatmaps below use the same base region
-          <span class="vec">p</span><i>∈[0,4]²</i>. The first panel is exactly the
-          field from Section 1. Multiplying the input by 2 and 4 fits twice and
-          four times as many variations into each spatial direction; it changes
-          feature size, not the output range. The listed weights determine how
-          strongly those finer patterns contribute to the lower-right normalized
-          sum. The production clouds continue the same process for eight octaves.
+          The six heatmaps below use the same base region
+          <span class="vec">p</span><i>∈[0,4]²</i>. The top row isolates the first
+          three raw octave fields. The bottom row accumulates two, three, and
+          eight octaves. The first top panel is exactly Section 1, and the final
+          bottom panel is the eight-octave field used by the production clouds.
+          Eight octaves retain substantially finer variation than two or three;
+          each additional octave requires another noise evaluation, so this
+          detail increases shader cost approximately linearly with <i>K</i>.
         </p>
         <div class="study-panel octave-study">
           <figure class="visual-panel">
-            <canvas class="study-canvas" data-demo="detail" aria-label="Four grayscale heatmaps showing three noise octaves and their normalized sum"></canvas>
-            <span class="octave-label octave-0"><i>N</i>(<span class="vec">p</span>) · weight 1</span>
-            <span class="octave-label octave-1"><i>N</i>(2<span class="vec">p</span>) · weight 0.7</span>
-            <span class="octave-label octave-2"><i>N</i>(4<span class="vec">p</span>) · weight 0.49</span>
-            <span class="octave-label octave-sum"><i>F</i><sub>3,0.7</sub>(<span class="vec">p</span>)</span>
+            <canvas class="study-canvas" data-demo="detail" aria-label="Six grayscale heatmaps showing raw octave fields and cumulative normalized sums"></canvas>
+            <span class="octave-label octave-raw-0"><i>N</i>(<span class="vec">p</span>)</span>
+            <span class="octave-label octave-raw-1"><i>N</i>(2<span class="vec">p</span>)</span>
+            <span class="octave-label octave-raw-2"><i>N</i>(4<span class="vec">p</span>)</span>
+            <span class="octave-label octave-sum-2"><i>F</i><sub>2,0.7</sub></span>
+            <span class="octave-label octave-sum-3"><i>F</i><sub>3,0.7</sub></span>
+            <span class="octave-label octave-sum-8"><i>F</i><sub>8,0.7</sub></span>
           </figure>
           <div class="study-text">
             <p class="equation equation-large">
@@ -365,20 +369,63 @@
 
       <section aria-labelledby="depth-title">
         <p class="step">3</p>
-        <h2 id="depth-title">Layers and parallax</h2>
+        <h2 id="depth-title">Parallax</h2>
+        <p>
+          Section 2 displays <span class="func">F</span><sub>8,0.7</sub> as
+          grayscale so that its numerical values are visible. It first converts them into the boundary
+          of a filled region.
+        </p>
+        <p>
+          Begin with a one-dimensional slice
+          <i>f(x)=<span class="func">F</span><sub>8,0.7</sub>((x,0))</i>. Let
+          <i>m</i> be a baseline height and <i>A&gt;0</i> a vertical amplitude.
+          Subtracting ½ centres the noise around zero: values above ½ raise the
+          boundary and values below ½ lower it. Filling every point below that
+          boundary produces a cloud silhouette.
+        </p>
+        <p class="small-equation equation-lines">
+          h(x) = m + A[f(x)−½]<br>
+          M(x,y) = 𝟙<sub>{y&lt;h(x)}</sub>
+        </p>
+        <p>
+          Parallax is then introduced by translating the input of the same noise
+          field. The noise pattern is unchanged; only the position at which it is
+          sampled changes with time and apparent distance.
+        </p>
         <p>
           Let <span class="vec">p</span>=(<i>p<sub>1</sub>,p<sub>2</sub></i>) be the
-          height-normalized scene coordinate used by the production shader, and
-          let <i>t=4t</i><sub class="label">shader</sub>, where
-          <i>t</i><sub class="label">shader</sub> is the WebGL uniform
-          <code>iTime</code>. The subscript <i>i</i> identifies
-          a cloud layer. Each layer has a positive apparent distance
+          height-normalized scene coordinate, and let <i>t</i> denote scaled
+          animation time. The subscript <i>i</i> identifies a cloud layer. Each
+          layer has a positive apparent distance
           <i>d<sub>i</sub></i> and a horizontal phase <i>&phi;<sub>i</sub></i>.
         </p>
         <p class="small-equation">
           &Delta;x<sub>i</sub>(t) = −t/d<sub>i</sub>, &nbsp;
           d&Delta;x<sub>i</sub>/dt = −1/d<sub>i</sub>
         </p>
+        <figure class="concept-figure">
+          <svg viewBox="0 0 720 170" role="img" aria-labelledby="parallax-title parallax-desc">
+            <title id="parallax-title">Distance controls apparent motion</title>
+            <desc id="parallax-desc">Over the same time interval, a near point with small distance moves farther left than a far point with large distance.</desc>
+            <text class="paper-heading" x="28" y="22">same elapsed time t</text>
+            <line class="paper-line" x1="72" y1="65" x2="660" y2="65"/>
+            <line class="paper-line" x1="72" y1="128" x2="660" y2="128"/>
+            <circle class="paper-point" cx="610" cy="65" r="5"/>
+            <circle class="paper-point" cx="610" cy="128" r="5"/>
+            <circle class="paper-focus" cx="270" cy="65" r="5"/>
+            <circle class="paper-focus" cx="500" cy="128" r="5"/>
+            <line class="paper-arrow" x1="598" y1="65" x2="280" y2="65"/>
+            <polygon class="paper-arrow-head" points="280,65 290,59 290,71"/>
+            <line class="paper-arrow" x1="598" y1="128" x2="510" y2="128"/>
+            <polygon class="paper-arrow-head" points="510,128 520,122 520,134"/>
+            <text class="paper-label" x="82" y="53">small d: large displacement t/d</text>
+            <text class="paper-label" x="82" y="116">large d: small displacement t/d</text>
+            <text class="paper-callout" x="616" y="49">t = 0</text>
+            <text class="paper-callout" x="250" y="88">t &gt; 0</text>
+            <text class="paper-callout" x="480" y="151">t &gt; 0</text>
+          </svg>
+          <figcaption>For equal elapsed time, apparent speed is inversely proportional to distance.</figcaption>
+        </figure>
         <p>
           The shader samples at <i>p<sub>1</sub>+t/d<sub>i</sub></i>; therefore a
           fixed feature appears at <i>p<sub>1</sub>=
@@ -386,7 +433,10 @@
           <i>1/d<sub>i</sub></i>, so distant layers move more slowly.
         </p>
         <p>
-          Define the exact production lookup position
+          The production version replaces the introductory horizontal slice by
+          a full two-dimensional lookup. At every pixel, it evaluates the noise,
+          converts that value into a local threshold, and tests whether
+          <i>p<sub>2</sub></i> lies below it. Define the exact lookup position
           <span class="vec">q</span><sub>i</sub>, field value <i>z<sub>i</sub></i>,
           and binary layer mask <i>M<sub>i</sub></i> as shown below.
           The parameters <i>m<sub>i</sub></i> and <i>A<sub>i</sub></i> are the
@@ -422,17 +472,15 @@
   time / distance + phase, <span class="code-number">0.0</span>
 );
 <span class="code-type">float</span> z = fbm(q, <span class="code-number">8</span>);
-<span class="code-type">float</span> boundary = middle
-  + amplitude * (z - <span class="code-number">0.5</span>);
 <span class="code-type">float</span> mask = <span class="code-number">1.0</span>
-  - step(boundary, p.y);</code></pre>
+  - step(middle + amplitude*(z-<span class="code-number">0.5</span>), p.y);</code></pre>
           </div>
         </div>
       </section>
 
       <section aria-labelledby="form-title">
         <p class="step">4</p>
-        <h2 id="form-title">Train and bridge masks</h2>
+        <h2 id="form-title">Masks</h2>
         <p>
           A spatial mask <span class="func">M</span> assigns every point
           <span class="vec">p</span> in the two-dimensional image plane a number
@@ -441,6 +489,49 @@
           masks, and hard circular wheel masks. The symbol 𝟙 denotes an indicator:
           it returns 1 when its subscript condition is true and 0 otherwise.
         </p>
+        <p>
+          Begin in one dimension. An interval mask selects the points between
+          <i>a</i> and <i>b</i>. A rectangle applies the same test independently to
+          horizontal and vertical coordinates; a disk replaces those coordinate
+          tests with a distance test.
+        </p>
+        <p class="small-equation">
+          <span class="func">M</span><sub>[a,b]</sub>(x) = 𝟙<sub>{a&lt;x&lt;b}</sub>
+        </p>
+        <figure class="concept-figure">
+          <svg viewBox="0 0 720 176" role="img" aria-labelledby="mask-build-title mask-build-desc">
+            <title id="mask-build-title">Building a repeated object from simple masks</title>
+            <desc id="mask-build-desc">An interval becomes a rectangle, rectangles and disks are united, and the result is repeated.</desc>
+            <line class="paper-separator" x1="180" y1="18" x2="180" y2="154"/>
+            <line class="paper-separator" x1="360" y1="18" x2="360" y2="154"/>
+            <line class="paper-separator" x1="540" y1="18" x2="540" y2="154"/>
+
+            <text class="paper-heading" x="51" y="24">interval</text>
+            <line class="paper-line" x1="28" y1="91" x2="152" y2="91"/>
+            <line class="paper-curve-strong" x1="58" y1="91" x2="127" y2="91" stroke="#222"/>
+            <circle class="paper-point" cx="58" cy="91" r="4"/>
+            <circle class="paper-point" cx="127" cy="91" r="4"/>
+            <text class="paper-symbol" x="53" y="116">a</text>
+            <text class="paper-symbol" x="123" y="116">b</text>
+
+            <text class="paper-heading" x="224" y="24">rectangle</text>
+            <rect x="218" y="58" width="104" height="62" fill="#222"/>
+
+            <text class="paper-heading" x="402" y="24">union</text>
+            <rect x="395" y="62" width="118" height="52" fill="#222"/>
+            <circle cx="420" cy="124" r="17" fill="#222"/>
+            <circle cx="487" cy="124" r="17" fill="#222"/>
+
+            <text class="paper-heading" x="584" y="24">repetition</text>
+            <g fill="#222">
+              <rect x="557" y="70" width="45" height="35"/><circle cx="568" cy="113" r="9"/><circle cx="591" cy="113" r="9"/>
+              <rect x="607" y="70" width="45" height="35"/><circle cx="618" cy="113" r="9"/><circle cx="641" cy="113" r="9"/>
+              <rect x="657" y="70" width="45" height="35"/><circle cx="668" cy="113" r="9"/><circle cx="691" cy="113" r="9"/>
+            </g>
+            <text class="paper-formula" x="558" y="148">fract(kx)</text>
+          </svg>
+          <figcaption>Complex silhouettes are unions and repetitions of elementary inclusion tests.</figcaption>
+        </figure>
         <p class="small-equation">
           <span class="func">M</span><sub class="label">wheel</sub>(<span class="vec">p</span>) =
           𝟙<sub>{‖<span class="vec">p</span>−<span class="vec">c</span>‖² &lt; r²}</sub>
@@ -450,7 +541,8 @@
           repeats local coordinates every <i>1/9</i> scene units, allowing one
           wagon and wheel pattern to generate the complete train. The combined
           train mask is the pointwise maximum of its component masks, which is
-          their set-theoretic union.
+          their set-theoretic union. These analytic tests avoid mesh or image
+          assets and remain sharply defined at any output resolution.
         </p>
         <p>
           The bridge function in the source shader computes a keep mask
@@ -459,12 +551,10 @@
           inclusion mask is <i>M<sub>B</sub>=1−K<sub>B</sub></i>.
         </p>
         <p>
-          Both panels call the same shared mask functions as the final renderer.
-          The left panel crops and enlarges the exact train mask; the right panel
-          shows the exact moving bridge mask. Black is 0 and white is 1. The final
-          shader applies colours only after these masks have been evaluated. In
-          the maximum below, every component mask is evaluated at the same
-          position <span class="vec">p</span>; those repeated arguments are omitted.
+          The left panel enlarges the train mask and the right shows the bridge
+          mask. Black denotes 0 and white denotes 1. In the maximum below, every
+          component mask is evaluated at the same point <span class="vec">p</span>;
+          the repeated arguments are omitted.
         </p>
         <div class="study-panel">
           <figure class="visual-panel">
@@ -482,95 +572,124 @@
               <span class="func">M</span><sub class="label">B</sub>(<span class="vec">p</span>,t) =
               1−K<sub class="label">B</sub>(<span class="vec">p</span>,t)
             </p>
-            <pre><code><span class="code-type">TrainMasks</span> parts =
-  productionTrainMasks(p);
-<span class="code-type">float</span> train =
-  productionTrainCombinedMask(parts);
-
-<span class="code-type">float</span> bridge = <span class="code-number">1.0</span>
-  - productionBridgeKeepMask(p, time);</code></pre>
+            <pre><code><span class="code-type">float</span> wheel = <span class="code-number">1.0</span>
+  - step(r*r, dot(p-c, p-c));
+<span class="code-type">float</span> train = max(body,
+  max(chimney, wheel));
+<span class="code-type">float</span> bridge = <span class="code-number">1.0</span> - bridgeKeep;</code></pre>
           </div>
         </div>
       </section>
 
       <section aria-labelledby="smoke-title">
         <p class="step">5</p>
-        <h2 id="smoke-title">A widening, irregular smoke plume</h2>
+        <h2 id="smoke-title">Smoke</h2>
         <p>
-          Let <span class="vec">x</span><sub class="label">frag</sub><i>∈ℝ²</i>
-          denote pixel coordinates and let <i>H&gt;0</i> denote the viewport height.
-          The production geometry uses the height-normalized coordinate
-          <span class="vec">p</span> = <span class="vec">x</span><sub class="label">frag</sub>/<i>H</i>.
-          Let <i>p</i><sub class="label">chim</sub><i> = 0.49</i> be the chimney’s horizontal coordinate.
-          For pixels behind the chimney, define
-          <i>&rho; = p</i><sub class="label">chim</sub><i>−p<sub>1</sub> ≥ 0</i> as horizontal distance
-          from the source.
+          Start with an ordinary horizontal strip. Let
+          <span class="vec">p</span>=(<i>x,y</i>) be a point in the scene, let
+          <i>c</i> be the height of the strip’s centre, and let <i>w&gt;0</i> be
+          its half-width. The vertical distance from <span class="vec">p</span>
+          to the centre is <i>|y−c|</i>. Therefore the point is inside the strip
+          precisely when <i>|y−c|&lt;w</i>.
+        </p>
+        <p class="small-equation equation-lines">
+          <span class="func">D</span>(<span class="vec">p</span>) = |y−c|−w<br>
+          D&lt;0: inside, &nbsp; D=0: boundary, &nbsp; D&gt;0: outside
         </p>
         <p>
-          Let <i>&mu;(<span class="vec">p</span>,t)</i> denote the plume’s centre
-          height and let <i>&delta;(&rho;)</i> denote its half-width. The smoke mask
-          is determined by the signed boundary function <i>D</i>: negative values
-          lie inside the plume and positive values lie outside.
+          Subtracting <i>w</i> from the distance creates a signed boundary value
+          <i>D</i>. A negative result means that the point is less than one
+          half-width from the centre and is therefore inside. Smoke is obtained
+          by allowing the centre <i>c</i> and width <i>w</i> to change with
+          position and time.
         </p>
-        <p class="small-equation">
-          <span class="func">D</span>(<span class="vec">p</span>,t) =
-          |p<sub>2</sub>−&mu;(<span class="vec">p</span>,t)|−&delta;(&rho;)
+        <figure class="concept-figure">
+          <svg viewBox="0 0 720 182" role="img" aria-labelledby="smoke-build-title smoke-build-desc">
+            <title id="smoke-build-title">From a constant strip to an irregular smoke plume</title>
+            <desc id="smoke-build-desc">A straight constant-width strip is curved, given a varying width, and perturbed by noise.</desc>
+            <line class="paper-separator" x1="180" y1="18" x2="180" y2="160"/>
+            <line class="paper-separator" x1="360" y1="18" x2="360" y2="160"/>
+            <line class="paper-separator" x1="540" y1="18" x2="540" y2="160"/>
+            <text class="paper-heading" x="45" y="24">constant strip</text>
+            <rect x="25" y="75" width="130" height="40" fill="#d2d2d2"/>
+            <line class="paper-curve" x1="25" y1="95" x2="155" y2="95"/>
+
+            <text class="paper-heading" x="224" y="24">curved centre</text>
+            <path d="M205 122 Q275 118 335 54 L335 88 Q275 143 205 150 Z" fill="#d2d2d2"/>
+            <path class="paper-curve" d="M205 136 Q275 130 335 71"/>
+
+            <text class="paper-heading" x="397" y="24">varying width</text>
+            <path d="M380 135 Q440 84 520 48 Q449 112 380 150 Z" fill="#d2d2d2"/>
+            <path class="paper-curve" d="M380 143 Q445 110 520 62"/>
+
+            <text class="paper-heading" x="585" y="24">noise perturbation</text>
+            <path d="M560 139 C583 117 600 128 619 95 C638 63 662 80 702 42 L702 76 C675 94 651 81 632 112 C610 145 589 132 560 153 Z" fill="#d2d2d2"/>
+            <path class="paper-curve" d="M560 146 C583 124 600 137 625 103 C646 74 668 88 702 59"/>
+          </svg>
+          <figcaption>Curvature controls the route, width controls the envelope, and noise removes mechanical regularity.</figcaption>
+        </figure>
+        <p>
+          The chimney is at <i>x<sub>0</sub>=0.49</i>. Smoke exists to its left,
+          so define <i>s=x<sub>0</sub>−x≥0</i>. The number <i>s</i> is simply the
+          horizontal distance travelled from the chimney: <i>s=0</i> at the
+          source and increases farther along the plume.
         </p>
         <p>
-          The field <i>G(<span class="vec">p</span>,t)</i> denotes the moving
-          eight-octave noise that perturbs the centre height. The following
-          equations define <i>G</i>, <i>&mu;</i>, and <i>&delta;</i> explicitly. The
-          vector <span class="vec">a</span>(t)=(0.16t+3.5,0) is the horizontal
-          noise translation, and <i>e</i> is the base of the natural exponential
-          function.
+          Let <i>R(<span class="vec">p</span>,t)</i> be the eight-octave field from
+          Section 2, sampled at a horizontally moving position. This is the
+          grayscale field in the left panel. The centre height starts with the
+          smooth curve <i>0.16√s+0.12</i>; the additional term
+          <i>−0.4[R−0.55]</i> moves that curve up and down according to the noise.
         </p>
         <p>
-          The field <i>G</i> is <i>F<sub>8,0.9</sub></i> translated horizontally
-          with time and shifted by 0.55. The term <i>−0.4G</i> perturbs the nominal
-          centre curve <i>0.16√&rho;+0.12</i>. Because the square-root slope
-          decreases as <i>&rho;</i> grows, the centre rises rapidly near the chimney
-          and more gradually farther away.
+          The width is <i>w(s)=0.8se<sup>−10s</sup></i>. It begins at zero,
+          widens until <i>s=0.1</i>, and then narrows. The factor <i>s</i> causes
+          the initial growth, while the exponential factor
+          <i>e<sup>−10s</sup></i> eventually causes the decay. Substituting this
+          width and the noisy centre into the same strip test produces the plume.
+          The condition <i>D&lt;0</i> selects all smoke; the stricter condition
+          <i>D&lt;−0.02</i> selects points farther inside and forms the inner region.
         </p>
         <p>
-          The half-width <i>&delta;(&rho;)=0.8&rho;e<sup>−10&rho;</sup></i> is zero at
-          the source, reaches its maximum at <i>&rho;=0.1</i>, and then decreases.
-          The final shader uses two nested masks: <i>D&lt;0</i> selects the outer
-          smoke colour and <i>D&lt;−0.02</i> selects its darker interior.
-        </p>
-        <p>
-          Both panels call the production smoke functions. The left panel displays
-          the translated eight-octave field <i>G+0.55=F<sub>8,0.9</sub></i> as
-          grayscale. The right panel displays the exact outer and inner masks
-          produced from <i>D</i>. Thus it shows the direct sequence from noise
-          field to final smoke regions.
+          Thus the left panel is not smoke by itself. It supplies the small
+          vertical changes in the centre curve. The right panel shows the result
+          after the centre, width, and inside–outside test have been combined.
         </p>
         <div class="study-panel">
           <figure class="visual-panel">
-            <canvas class="study-canvas" data-demo="smoke" aria-label="Construction of a curved procedural smoke plume"></canvas>
-            <span class="panel-label panel-left"><i>G+0.55</i> · noise field</span>
-            <span class="panel-label panel-right">production smoke masks</span>
+            <canvas class="study-canvas" data-demo="smoke" aria-label="Smoke noise field and the resulting smoke masks"></canvas>
+            <span class="panel-label panel-left"><i>R</i>(<span class="vec">p</span>,t) · noise</span>
+            <span class="panel-label panel-right">outer and inner regions</span>
           </figure>
           <div class="study-text">
             <p class="equation equation-lines">
-              &rho; = p<sub class="label">chim</sub> − p<sub>1</sub><br>
-              <span class="vec">a</span>(t) = (0.16t+3.5,0)<br>
-              <span class="func">G</span>(<span class="vec">p</span>,t) =<br>
-              <span class="equation-indent"><span class="func">F</span><sub>8,0.9</sub>(<span class="vec">p</span> + <span class="vec">a</span>(t)) − 0.55</span><br>
-              &mu;(<span class="vec">p</span>,t) =<br>
-              <span class="equation-indent">0.16&radic;&rho; + 0.12 − 0.4<span class="func">G</span>(<span class="vec">p</span>,t)</span><br>
-              &delta;(&rho;) = 0.8&rho;e<sup>−10&rho;</sup><br>
+              s = 0.49−x<br>
+              <span class="func">R</span>(<span class="vec">p</span>,t) =<br>
+              <span class="equation-indent"><span class="func">F</span><sub>8,0.9</sub>(<span class="vec">p</span>+(0.16t+3.5,0))</span><br>
+              c(<span class="vec">p</span>,t) =<br>
+              <span class="equation-indent">0.16&radic;s+0.12−0.4[<span class="func">R</span>(<span class="vec">p</span>,t)−0.55]</span><br>
+              w(s) = 0.8se<sup>−10s</sup><br>
               <span class="func">D</span>(<span class="vec">p</span>,t) =
-              |p<sub>2</sub>−&mu;(<span class="vec">p</span>,t)|−&delta;(&rho;)<br>
+              |y−c(<span class="vec">p</span>,t)|−w(s)<br>
               M<sub class="label">outer</sub> = 𝟙<sub>{D&lt;0}</sub>, &nbsp;
               M<sub class="label">inner</sub> = 𝟙<sub>{D&lt;−0.02}</sub>
             </p>
+            <pre><code><span class="code-type">float</span> s = <span class="code-number">0.49</span> - p.x;
+<span class="code-type">float</span> R = fbm2(p + <span class="code-type">vec2</span>(
+  <span class="code-number">0.16</span>*time + <span class="code-number">3.5</span>, <span class="code-number">0.0</span>), <span class="code-number">8</span>);
+<span class="code-type">float</span> center = <span class="code-number">0.16</span>*sqrt(s) + <span class="code-number">0.12</span>
+  - <span class="code-number">0.4</span>*(R - <span class="code-number">0.55</span>);
+<span class="code-type">float</span> width = <span class="code-number">0.8</span>*s*exp(-<span class="code-number">10.0</span>*s);
+<span class="code-type">float</span> D = abs(p.y - center) - width;
+<span class="code-type">float</span> outer = <span class="code-number">1.0</span> - step(<span class="code-number">0.0</span>, D);
+<span class="code-type">float</span> inner = <span class="code-number">1.0</span> - step(-<span class="code-number">0.02</span>, D);</code></pre>
           </div>
         </div>
       </section>
 
       <section class="synthesis" aria-labelledby="synthesis-title">
         <p class="step">6</p>
-        <h2 id="synthesis-title">Final expression</h2>
+        <h2 id="synthesis-title">Composition</h2>
         <p>
           For viewport width <i>W&gt;0</i> and height <i>H&gt;0</i>, define normalized
           display coordinates by
@@ -589,6 +708,38 @@
           = (1−m)<span class="vec">a</span> + m<span class="vec">b</span>
         </p>
         <p>
+          The mask <i>m</i> is a weight. At <i>m=0</i> the result is entirely
+          <span class="vec">a</span>; at <i>m=1</i> it is entirely
+          <span class="vec">b</span>; and at <i>m=½</i> both colours contribute
+          equally. When two opaque masks overlap, the operation applied later
+          determines the visible colour in the overlap.
+        </p>
+        <figure class="concept-figure">
+          <svg viewBox="0 0 720 224" role="img" aria-labelledby="blend-title blend-desc">
+            <title id="blend-title">Blend weights and order dependence</title>
+            <desc id="blend-desc">Three blend weights interpolate from dark to light. Two overlapping layers give different results when their order is reversed.</desc>
+            <text class="paper-heading" x="22" y="22">one blend</text>
+            <rect x="45" y="40" width="160" height="48" fill="#333"/>
+            <rect x="280" y="40" width="160" height="48" fill="#888"/>
+            <rect x="515" y="40" width="160" height="48" fill="#ddd" stroke="#777"/>
+            <text class="paper-formula" x="101" y="108">m = 0</text>
+            <text class="paper-formula" x="336" y="108">m = ½</text>
+            <text class="paper-formula" x="571" y="108">m = 1</text>
+
+            <line class="paper-separator" x1="360" y1="124" x2="360" y2="214"/>
+            <text class="paper-heading" x="22" y="143">A, then B</text>
+            <rect x="75" y="154" width="150" height="48" fill="#444"/>
+            <rect x="165" y="168" width="150" height="38" fill="#c8c8c8" stroke="#777"/>
+            <text class="paper-callout" x="225" y="193">B covers A</text>
+
+            <text class="paper-heading" x="382" y="143">B, then A</text>
+            <rect x="435" y="168" width="150" height="38" fill="#c8c8c8" stroke="#777"/>
+            <rect x="525" y="154" width="150" height="48" fill="#444"/>
+            <text class="paper-callout" x="449" y="193">A covers B</text>
+          </svg>
+          <figcaption>Interpolation depends on the mask value; compositing also depends on operation order.</figcaption>
+        </figure>
+        <p>
           Sequential application of <span class="operator">Blend</span> is order-dependent: a later
           layer replaces an earlier colour wherever its mask equals 1. The
           production order follows the source shader
@@ -604,16 +755,17 @@
           <span class="vec">c</span><sub>j</sub>.
         </p>
         <p>
-          Every colour and mask in the recurrence below is evaluated at the same
-          pixel and time; those arguments are omitted to keep the composition
-          legible. The order is exactly the sequence of <code>mix</code> calls and smoke
-          replacements in <code>scene.glsl</code>. A later operation replaces an
-          earlier colour wherever its mask equals 1.
+          Every colour and mask below is evaluated at the same pixel and time;
+          those arguments are omitted for legibility. The renderer applies this
+          recurrence in source order: each <code>mix</code> is one instance of
+          <span class="operator">Blend</span>.
         </p>
         <p>
           After compositing, <i>V:[0,1]²→[0.5,1]</i> applies the vignette. It equals
           1 at <span class="vec">u</span>=(½,½) and 0.5 on every image boundary,
           so the centre is unchanged while the edges are multiplied by one half.
+          This frames the central train and cloud layers without changing their
+          geometry or compositing order.
         </p>
         <div class="final-expression">
           <span class="vec">c</span><sub>0</sub> = <span class="vec">c</span><sub class="label">bg</sub><br>
@@ -628,6 +780,29 @@
           <span class="func">V</span>(<span class="vec">u</span>) =
           ½ + ½[16u<sub>1</sub>u<sub>2</sub>(1−u<sub>1</sub>)(1−u<sub>2</sub>)]<sup>0.2</sup>
         </p>
+        <p>
+          The left panel displays <i>V</i>; the right multiplies a reference grid
+          by <i>V</i>. The final showcase applies the same factor to the completed
+          scene.
+        </p>
+        <div class="study-panel">
+          <figure class="visual-panel">
+            <canvas class="study-canvas" data-demo="composition" aria-label="Exact vignette field and its effect on a reference image"></canvas>
+            <span class="panel-label panel-left"><i>V</i>(<span class="vec">u</span>)</span>
+            <span class="panel-label panel-right">reference × <i>V</i></span>
+          </figure>
+          <div class="study-text">
+            <p class="equation equation-lines">
+              <span class="vec">c</span><sub class="label">out</sub>(<span class="vec">u</span>,t) =<br>
+              <span class="equation-indent"><span class="func">V</span>(<span class="vec">u</span>)
+              <span class="vec">c</span><sub class="label">scene</sub>(<span class="vec">u</span>,t)</span>
+            </p>
+            <pre><code><span class="code-type">float</span> base = <span class="code-number">16.0</span>*uv.x*uv.y
+  * (<span class="code-number">1.0</span>-uv.x) * (<span class="code-number">1.0</span>-uv.y);
+<span class="code-type">float</span> V = <span class="code-number">0.5</span> + <span class="code-number">0.5</span>*pow(base, <span class="code-number">0.2</span>);
+<span class="code-type">vec3</span> outputColor = V * sceneColor;</code></pre>
+          </div>
+        </div>
       </section>
 
       <section class="references" aria-labelledby="references-title">
@@ -667,7 +842,7 @@
         </p>
       </footer>
     </main>
-    <script type="module" src="./main.js?v=20260629-2"></script>
-    <script type="module" src="./process-demos.js?v=20260629-7"></script>
+    <script type="module" src="./main.js?v=20260629-3"></script>
+    <script type="module" src="./process-demos.js?v=20260629-10"></script>
   </body>
 </html>

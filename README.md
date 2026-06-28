@@ -13,8 +13,8 @@ an independent derivation of the source shader.
 
 - A 16:9 live rendering of the complete scene.
 - Music and fullscreen controls beneath the showcase. Music is off by default.
-- Five small WebGL2 figures that isolate noise, cloud detail, depth layers,
-  train geometry, and smoke.
+- Six small WebGL2 figures that isolate noise, cloud detail, depth layers,
+  train geometry, smoke, and the post-process vignette.
 - Equations expanded from elementary examples into the expressions used by the
   shaders.
 - Numbered references linked to primary publication or creator pages.
@@ -48,7 +48,7 @@ cloudglen_express/
 ├── index.html                 article, equations, controls, and references
 ├── style.css                  academic page layout and bounded canvas sizing
 ├── main.js                    final two-pass WebGL2 renderer and audio control
-├── process-demos.js           shared debug renderer for the five figures
+├── process-demos.js           shared debug renderer for the six figures
 ├── shaders/
 │   ├── common.glsl            production functions shared by scene and figures
 │   ├── debug.glsl             intermediate-output debug modes
@@ -98,6 +98,7 @@ intermediate output for each figure:
 | Layers | Exact isolated production cloud masks at four distances |
 | Train and bridge | Exact cropped production masks |
 | Smoke | Exact production noise field and nested smoke masks |
+| Composition | Exact vignette field and its multiplicative effect |
 
 The figures are rendered only while visible. Their drawing buffers are resized
 from their bounded CSS boxes, so embedding the page under a different domain or

@@ -18,18 +18,24 @@ vec3 renderNoise(vec2 uv) {
 }
 
 vec3 renderOctaves(vec2 uv) {
-    bool right = uv.x>=0.5;
     bool top = uv.y>=0.5;
-    vec2 local = fract(2.0*uv);
+    int column = min(2,int(floor(3.0*uv.x)));
+    vec2 local = fract(vec2(3.0*uv.x,2.0*uv.y));
     vec2 p = 4.0*local;
-    float scale = top ? (right ? 2.0 : 1.0) : 4.0;
-    float value = (!top && right) ? fbm(p,3) : noise(scale*p);
+    float value;
+    float scale = exp2(float(column));
+    if (top) value = noise(scale*p);
+    else if (column==0) value = fbm(p,2);
+    else if (column==1) value = fbm(p,3);
+    else value = fbm(p,8);
     vec3 color = vec3(value);
-    if (top || !right) color = contrastGrid(color,scale*p,0.20);
-    float divider = max(
-        1.0-smoothstep(0.0,0.006,abs(uv.x-0.5)),
-        1.0-smoothstep(0.0,0.006,abs(uv.y-0.5))
+    if (top) color = contrastGrid(color,scale*p,0.20);
+    float verticalDivider = max(
+        1.0-smoothstep(0.0,0.006,abs(uv.x-1.0/3.0)),
+        1.0-smoothstep(0.0,0.006,abs(uv.x-2.0/3.0))
     );
+    float horizontalDivider = 1.0-smoothstep(0.0,0.006,abs(uv.y-0.5));
+    float divider = max(verticalDivider,horizontalDivider);
     return mix(color,vec3(0.08),divider);
 }
 
@@ -94,6 +100,23 @@ vec3 renderSmoke(vec2 uv) {
     return mix(color,vec3(0.35),divider);
 }
 
+vec3 renderComposition(vec2 uv) {
+    bool right = uv.x>=0.5;
+    vec2 local = vec2(fract(2.0*uv.x),uv.y);
+    float vignette = vignetteFactor(local);
+    vec3 color;
+    if (!right) {
+        color = vec3(vignette);
+    } else {
+        vec2 cells = floor(8.0*local);
+        float checker = mod(cells.x+cells.y,2.0);
+        vec3 source = mix(vec3(0.35),vec3(0.88),checker);
+        color = vignette*source;
+    }
+    float divider = 1.0-smoothstep(0.0,0.006,abs(uv.x-0.5));
+    return mix(color,vec3(0.1),divider);
+}
+
 void main() {
     vec2 uv = gl_FragCoord.xy/uResolution;
     vec3 color;
@@ -101,6 +124,7 @@ void main() {
     else if (uDebugMode==2) color = renderOctaves(uv);
     else if (uDebugMode==3) color = renderCloudLayers(uv);
     else if (uDebugMode==4) color = renderGeometryMasks(uv);
-    else color = renderSmoke(uv);
+    else if (uDebugMode==5) color = renderSmoke(uv);
+    else color = renderComposition(uv);
     outColor = vec4(color,1.0);
 }

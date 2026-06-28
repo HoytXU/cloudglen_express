@@ -140,3 +140,7 @@ float productionBridgeKeepMask(vec2 uv, float t) {
         +step(-0.1,-repeated.y),1.0);
     return k;
 }
+
+float vignetteFactor(vec2 uv) {
+    return 0.5+0.5*pow(16.0*uv.x*uv.y*(1.0-uv.x)*(1.0-uv.y),0.2);
+}
