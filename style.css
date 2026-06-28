@@ -132,6 +132,7 @@ p { margin: 0 0 12px; }
 }
 
 .equation-large { font-size: 1.05rem; }
+.equation-lines { white-space: normal; }
 
 .fraction { display: inline-flex; flex-direction: column; align-items: center; vertical-align: middle; text-align: center; }
 .fraction > span:first-child { padding: 0 5px 2px; border-bottom: 1px solid currentColor; }
@@ -153,6 +154,21 @@ code { font: inherit; }
 .code-number { color: #536b34; }
 .symbols { margin: 0; color: #666; font-size: 0.84rem; }
 
+.explanation {
+  margin: 12px 2px 0;
+  color: #555;
+  font-size: 0.9rem;
+  line-height: 1.58;
+}
+
+.explanation code,
+.synthesis code {
+  padding: 0 3px;
+  color: #25343d;
+  background: #f2f2f2;
+  font: 0.82em "Courier New", Consolas, monospace;
+}
+
 .synthesis { padding-top: 28px; border-top: 1px solid #ddd; }
 
 .final-expression {
@@ -169,6 +185,23 @@ code { font: inherit; }
 }
 
 .notation { color: #666; font-size: 0.82rem; text-align: center; }
+
+.vignette-equation {
+  width: fit-content;
+  max-width: 100%;
+  margin: 18px auto 6px;
+  text-align: center;
+}
+
+.references {
+  padding-top: 28px;
+  border-top: 1px solid #ddd;
+}
+
+.references ol { margin: 14px 0 0; padding-left: 1.35rem; }
+.references li { margin-bottom: 10px; padding-left: 4px; color: #444; font-size: 0.88rem; }
+.references a { color: #274e67; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+.references a:hover { color: #111; }
 
 footer { margin-top: 46px; padding-top: 14px; border-top: 1px solid #ddd; color: #555; font-size: 0.82rem; font-style: italic; }
 footer p { margin: 2px 0; }
