@@ -11,6 +11,16 @@ body {
 html { overflow-x: hidden; }
 body { min-height: 100vh; }
 
+html[lang="zh-CN"] body {
+  font-family: "Noto Serif CJK SC", "Source Han Serif SC", "Songti SC", SimSun, serif;
+}
+
+html[lang="zh-CN"] .control-button,
+html[lang="zh-CN"] .panel-label,
+html[lang="zh-CN"] .octave-label {
+  font-family: "Noto Serif CJK SC", "Source Han Serif SC", "Songti SC", SimSun, serif;
+}
+
 .page {
   box-sizing: border-box;
   width: 70%;

@@ -19,10 +19,16 @@ soundtrack.preload = "metadata";
 let soundEnabled = false;
 
 const soundToggle = document.querySelector("#sound-toggle");
+const isChinese = () => document.documentElement.lang === "zh-CN";
+const updateSoundToggleText = () => {
+  soundToggle.textContent = isChinese()
+    ? `音乐：${soundEnabled ? "开" : "关"}`
+    : `Music: ${soundEnabled ? "On" : "Off"}`;
+};
 soundToggle.addEventListener("click", () => {
   soundEnabled = !soundEnabled;
   soundToggle.setAttribute("aria-pressed", String(soundEnabled));
-  soundToggle.textContent = soundEnabled ? "Music: On" : "Music: Off";
+  updateSoundToggleText();
   if (soundEnabled) {
     soundtrack.play().catch(() => {});
   } else {
@@ -31,6 +37,14 @@ soundToggle.addEventListener("click", () => {
 });
 
 const fullscreenToggle = document.querySelector("#fullscreen-toggle");
+const updateFullscreenToggleText = () => {
+  const active = document.fullscreenElement === shaderCard;
+  fullscreenToggle.textContent = isChinese()
+    ? (active ? "退出全屏" : "全屏")
+    : (active ? "Exit fullscreen" : "Fullscreen");
+};
+updateSoundToggleText();
+updateFullscreenToggleText();
 fullscreenToggle.addEventListener("click", () => {
   if (document.fullscreenElement) {
     document.exitFullscreen();
@@ -265,8 +279,12 @@ window.addEventListener("resize", resize);
 document.addEventListener("fullscreenchange", () => {
   const isFullscreen = document.fullscreenElement === shaderCard;
   document.body.classList.toggle("shader-fullscreen", isFullscreen);
-  fullscreenToggle.textContent = isFullscreen ? "Exit fullscreen" : "Enter fullscreen";
+  updateFullscreenToggleText();
   resize();
+});
+document.addEventListener("languagechange", () => {
+  updateSoundToggleText();
+  updateFullscreenToggleText();
 });
 window.addEventListener("keydown", (event) => {
   if (event.key === "F11" || event.key === "f" || event.key === "F") {
