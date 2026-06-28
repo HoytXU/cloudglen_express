@@ -85,9 +85,26 @@ h1 {
 .source-line a:hover,
 .ref-mark:hover { text-decoration: underline; }
 
+.notation-convention {
+  margin: 18px 0 0;
+  color: #666;
+  font-size: 0.78rem;
+  text-align: center;
+}
+
+.vec {
+  font-style: italic;
+  font-weight: 700;
+}
+
+.func { font-style: italic; }
+.operator { font-style: normal; }
+.label { font-style: normal; }
+
 section { margin-top: 50px; }
 
 h2 { margin: 0 0 9px; font-size: 1.2rem; }
+h3 { margin: 28px 0 8px; font-size: 1rem; }
 p { margin: 0 0 12px; }
 
 .step {
@@ -113,6 +130,68 @@ p { margin: 0 0 12px; }
   text-align: center;
   white-space: nowrap;
 }
+
+.figure-intro {
+  margin: 14px 0 0;
+  color: #555;
+  font-size: 0.86rem;
+  text-align: center;
+}
+
+.interpolation-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 28px;
+  margin: 20px 0 26px;
+}
+
+.interpolation-card {
+  min-width: 0;
+  margin: 0;
+  background: #fff;
+}
+
+.interpolation-card figcaption {
+  margin-top: 3px;
+  color: #333;
+  font: 0.76rem/1.35 Georgia, "Times New Roman", serif;
+  text-align: center;
+}
+
+.interpolation-card svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: #fff;
+}
+
+.interpolation-card svg text {
+  fill: #222;
+}
+
+.paper-line {
+  fill: none;
+  stroke: #333;
+  stroke-width: 1.4;
+}
+
+.paper-guide {
+  fill: none;
+  stroke: #888;
+  stroke-width: 1;
+  stroke-dasharray: 4 4;
+}
+
+.paper-tick {
+  stroke: #777;
+  stroke-width: 1;
+}
+
+.paper-point { fill: #fff; stroke: #222; stroke-width: 1.5; }
+.paper-focus { fill: #222; stroke: #222; stroke-width: 1; }
+.interpolation-card svg .paper-symbol { font: italic 15px Georgia, "Times New Roman", serif; }
+.interpolation-card svg .paper-note { fill: #555; font: italic 13px Georgia, "Times New Roman", serif; }
+.interpolation-card svg .paper-formula { font: italic 14px Georgia, "Times New Roman", serif; }
 
 .study-panel {
   display: grid;
@@ -288,4 +367,5 @@ body.shader-fullscreen .shader-card #gl { width: 100vw; height: 100vh; aspect-ra
   .shader-controls { flex-wrap: wrap; }
   .shader-hint { width: 100%; margin: 2px 0 0; }
   .source-line { margin-top: -28px; }
+  .interpolation-grid { grid-template-columns: 1fr; }
 }

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="A progressive GLSL study of procedural clouds, parallax, and silhouette composition.">
     <title>Cloudglen Express</title>
-    <link rel="stylesheet" href="./style.css">
+    <link rel="stylesheet" href="./style.css?v=20260628-5">
   </head>
   <body>
     <main class="page">
@@ -26,32 +26,117 @@
         Scene adapted from <a href="#ref-shadertoy">[1]</a> ·
         soundtrack credited at <a href="#ref-music">[5]</a>
       </p>
+      <p class="notation-convention">
+        <strong>Notation.</strong> Scalar variables and scalar-valued functions are
+        italic; vectors are bold italic; standard and named operators are upright;
+        descriptive subscripts are upright. The symbol <i>t</i> is reserved for time.
+        Here ℝ denotes the real numbers, ℝ² denotes pairs of real numbers,
+        <i>∈</i> means “belongs to,” and [0,1] includes every value from 0 to 1.
+      </p>
 
       <section aria-labelledby="noise-title">
         <p class="step">1</p>
         <h2 id="noise-title">A continuous random line</h2>
         <p>
-          Begin with two numbers, <i>a</i> and <i>b</i>. To find a value between
-          them, move a fraction <i>t</i> of the way from the first to the second.
-          This is the same idea as finding a point partway along a ruler.
+          Let <i>a</i> and <i>b</i> be two real numbers. Let <i>&tau;</i> (Greek
+          “tau”) be a parameter between 0 and 1 that measures progress from
+          <i>a</i> to <i>b</i>. Define the linear interpolation operator
+          <i><span class="func">L</span>(a,b;&tau;) = (1−&tau;)a + &tau;b</i>.
+          The interpolated value may therefore be written
+          <i>x(&tau;)=L(a,b;&tau;)</i>.
+          Thus <i><span class="func">L</span>(a,b;0)=a</i> and
+          <i><span class="func">L</span>(a,b;1)=b</i>; intermediate values lie on
+          the line segment joining <i>a</i> and <i>b</i>. GLSL implements
+          <span class="func">L</span> as <code>mix</code>.
         </p>
-        <p class="small-equation">v(t) = (1 − t)a + tb</p>
+        <p class="figure-intro">
+          In two dimensions, <i>&tau;<sub>1</sub></i> measures horizontal progress
+          and <i>&tau;<sub>2</sub></i> measures vertical progress.
+        </p>
+
+        <div class="interpolation-grid">
+          <figure class="interpolation-card">
+            <svg viewBox="0 0 360 150" role="img" aria-labelledby="lerp-title lerp-desc">
+              <title id="lerp-title">A value interpolated along a line</title>
+              <desc id="lerp-desc">A point x of tau lies between endpoints a and b.</desc>
+              <line class="paper-line" x1="48" y1="55" x2="312" y2="55"/>
+              <circle class="paper-point" cx="48" cy="55" r="4"/>
+              <circle class="paper-point" cx="312" cy="55" r="4"/>
+              <circle class="paper-focus" cx="154" cy="55" r="5"/>
+              <line class="paper-guide" x1="48" y1="76" x2="154" y2="76"/>
+              <line class="paper-tick" x1="48" y1="70" x2="48" y2="82"/>
+              <line class="paper-tick" x1="154" y1="70" x2="154" y2="82"/>
+              <text class="paper-symbol" x="43" y="39">a</text>
+              <text class="paper-symbol" x="307" y="39">b</text>
+              <text class="paper-symbol" x="143" y="39">x(τ)</text>
+              <text class="paper-note" x="95" y="96">τ</text>
+              <text class="paper-formula" x="96" y="128">x(τ) = (1−τ)a + τb</text>
+            </svg>
+            <figcaption>1D linear interpolation</figcaption>
+          </figure>
+
+          <figure class="interpolation-card">
+            <svg viewBox="0 0 360 150" role="img" aria-labelledby="bilinear-title bilinear-desc">
+              <title id="bilinear-title">Interpolation inside a square cell</title>
+              <desc id="bilinear-desc">Two horizontal interpolations are joined by one vertical interpolation to estimate a value at point p.</desc>
+              <rect class="paper-line" x="82" y="18" width="196" height="92"/>
+              <line class="paper-guide" x1="82" y1="76" x2="278" y2="76"/>
+              <line class="paper-guide" x1="172" y1="18" x2="172" y2="110"/>
+              <circle class="paper-point" cx="82" cy="18" r="4"/>
+              <circle class="paper-point" cx="278" cy="18" r="4"/>
+              <circle class="paper-point" cx="82" cy="110" r="4"/>
+              <circle class="paper-point" cx="278" cy="110" r="4"/>
+              <circle class="paper-focus" cx="172" cy="76" r="5"/>
+              <text class="paper-symbol" x="48" y="20">v₀₁</text>
+              <text class="paper-symbol" x="286" y="20">v₁₁</text>
+              <text class="paper-symbol" x="48" y="114">v₀₀</text>
+              <text class="paper-symbol" x="286" y="114">v₁₀</text>
+              <text class="paper-symbol" x="181" y="72">p</text>
+              <text class="paper-note" x="121" y="92">τ₁</text>
+              <text class="paper-note" x="179" y="49">τ₂</text>
+              <text class="paper-formula" x="82" y="138">interpolate in τ₁, then in τ₂</text>
+            </svg>
+            <figcaption>2D bilinear interpolation</figcaption>
+          </figure>
+        </div>
+
+        <h3>Value noise with Perlin’s fade</h3>
         <p>
-          Random values at consecutive grid points would form a jagged line if
-          joined directly. Replacing <i>t</i> with a smooth fade <i>s(t)</i>
-          rounds each join. Perlin introduced the quintic fade used here
-          <a class="ref-mark" href="#ref-perlin">[2]</a>.
+          The shader divides the image plane into square cells and assigns a
+          random scalar to each corner. Ordinary bilinear interpolation would
+          leave changes in slope at cell boundaries, so the shader reshapes each
+          local coordinate with Perlin’s quintic fade
+          <a class="ref-mark" href="#ref-perlin">[2]</a>. Its flat ends make
+          neighbouring cells meet smoothly. This is value noise using Perlin’s
+          fade—not Perlin’s gradient-noise algorithm.
+        </p>
+        <p>
+          Let <span class="vec">p</span>=(<i>p<sub>1</sub>,p<sub>2</sub></i>) be a
+          point in the image plane. The operator <span class="operator">fract</span>
+          removes the integer part of each coordinate, so
+          <span class="vec">&xi;</span>=(<i>&xi;<sub>1</sub>,&xi;<sub>2</sub></i>) is
+          the point’s position inside its current grid cell. The four numbers
+          <i>v<sub>00</sub>,v<sub>10</sub>,v<sub>01</sub>,v<sub>11</sub></i> are
+          the values at that cell’s corners. The function <i>S</i> smooths each
+          local coordinate, producing the weight vector <span class="vec">w</span>.
+          In the polynomial below, <i>r</i> represents either local coordinate.
+          The resulting interpolated field is denoted
+          <i>N(<span class="vec">p</span>)</i>.
         </p>
         <div class="study-panel">
           <figure class="visual-panel">
             <canvas class="study-canvas" data-demo="noise" aria-label="Graph of a smooth one-dimensional noise function"></canvas>
-            <span class="axis axis-y">n(x)</span>
+            <span class="axis axis-y">N(x)</span>
             <span class="axis axis-x">x</span>
           </figure>
           <div class="study-text">
             <p class="equation equation-lines">
-              s(q) = 6q<sup>5</sup> − 15q<sup>4</sup> + 10q<sup>3</sup><br>
-              n(<b>p</b>) = lerp(lerp(a,b,u<sub>x</sub>), lerp(c,d,u<sub>x</sub>), u<sub>y</sub>)
+              <span class="vec">&xi;</span> = <span class="operator">fract</span>(<span class="vec">p</span>), &nbsp;
+              <span class="vec">w</span> = (<span class="func">S</span>(&xi;<sub>1</sub>), <span class="func">S</span>(&xi;<sub>2</sub>))<br>
+              <span class="func">S</span>(r) = 6r<sup>5</sup> − 15r<sup>4</sup> + 10r<sup>3</sup><br>
+              <span class="func">N</span>(<span class="vec">p</span>) =
+              <span class="func">L</span>(<span class="func">L</span>(v<sub>00</sub>,v<sub>10</sub>;w<sub>1</sub>),
+              <span class="func">L</span>(v<sub>01</sub>,v<sub>11</sub>;w<sub>1</sub>);w<sub>2</sub>)
             </p>
             <pre><code><span class="code-type">vec2</span> f = fract(p);
 <span class="code-type">vec2</span> u = f*f*f*(f*(f*<span class="code-number">6.0</span>-<span class="code-number">15.0</span>)+<span class="code-number">10.0</span>);
@@ -61,15 +146,17 @@
           </div>
         </div>
         <p class="explanation">
-          The full shader works on a square rather than a line. It blends the
-          lower two corners, blends the upper two corners, then blends those two
-          answers vertically. The figure is one horizontal slice through this
-          two-dimensional field.
+          The two inner applications of <span class="func">L</span> interpolate along the first
+          coordinate axis; the outer application interpolates along the second.
+          If <i>v<sub>00</sub>,…,v<sub>11</sub></i> are interpreted as corner
+          elevations, <span class="func">N</span>(<span class="vec">p</span>) is the interpolated
+          elevation at <span class="vec">p</span>.
         </p>
         <div class="math-notes">
-          <p><i>p</i> is the pixel position. <code>fract(p)</code> keeps only its position inside the current grid square.</p>
-          <p><i>a, b, c, d</i> are the four random corner values. The final scene reads them from a blue-noise texture; reference <a href="#ref-blue-noise">[4]</a> explains why blue-noise samples are spatially well distributed.</p>
-          <p>The fade has flat ends, so adjacent squares meet without a visible corner. It changes the route between the values, not the values themselves.</p>
+          <p>The notation <i>S:[0,1]→[0,1]</i> means that <i>S</i> accepts a number from 0 to 1 and returns a number in the same interval. It is monotone, satisfies <i>S(0)=0</i> and <i>S(1)=1</i>, and has zero first and second derivatives at both endpoints. Thus the joined field is <i>C²</i>: its value, slope, and curvature are continuous across cell boundaries.</p>
+          <p>The field <i>N:ℝ²→[0,1]</i> is deterministic and spatially smooth: nearby positions produce nearby values, whereas distant positions vary irregularly.</p>
+          <p>The final scalar is a smooth surface value between the four random corners. The graph shows one horizontal slice of that surface; the scene uses it as the height of a cloud edge.</p>
+          <p>The corner values come from the shader’s blue-noise texture; see <a href="#ref-blue-noise">[4]</a>.</p>
         </div>
       </section>
 
@@ -77,14 +164,28 @@
         <p class="step">2</p>
         <h2 id="cloud-title">One cloud boundary</h2>
         <p>
-          One smooth noise line makes broad hills but little detail. Imagine
-          drawing a large wavy coastline, then adding smaller wiggles with a
-          lighter pencil. The shader does the same by adding scaled copies of noise.
+          Let <span class="func">N</span><i>:ℝ²→[0,1]</i> be the value-noise field from Section 1. A
+          single evaluation scale contains broad variation but little fine
+          structure. Additional copies of <span class="func">N</span>, evaluated at successively
+          higher spatial frequencies and lower amplitudes, add smaller features.
+          Write <span class="func">F</span><sub>3,0.7</sub> for the normalized
+          combination of three such scales; the subscript records three scales
+          and an amplitude multiplier of 0.7.
         </p>
-        <p class="small-equation">cloud = broad shape + smaller detail + fine detail</p>
+        <p class="small-equation">
+          <span class="func">F</span><sub>3,0.7</sub>(<span class="vec">p</span>) =
+          [<span class="func">N</span>(<span class="vec">p</span>)
+          + 0.7<span class="func">N</span>(2<span class="vec">p</span>)
+          + 0.49<span class="func">N</span>(4<span class="vec">p</span>)] / 2.19
+        </p>
         <p>
-          Each copy is called an octave. This octave construction is commonly
-          called fBm in procedural graphics <a class="ref-mark" href="#ref-fbm">[3]</a>.
+          Each term is called an octave. More generally, <i>K</i> denotes a
+          positive integer number of octaves, and <i>g</i> denotes an amplitude
+          gain strictly between 0 and 1. The index <i>k</i> counts the octaves
+          from 0 to <i>K−1</i>, and Σ means “sum these terms over <i>k</i>.” The
+          resulting normalized octave sum is commonly called fractal Brownian
+          motion (fBm) in procedural
+          graphics <a class="ref-mark" href="#ref-fbm">[3]</a>.
         </p>
         <div class="study-panel">
           <figure class="visual-panel comparison">
@@ -94,7 +195,7 @@
           </figure>
           <div class="study-text">
             <p class="equation equation-large">
-              C(<b>p</b>) = <span class="fraction"><span>&Sigma;<sup>K−1</sup><sub>k=0</sub> g<sup>k</sup>n(2<sup>k</sup><b>p</b>)</span><span>&Sigma;<sup>K−1</sup><sub>k=0</sub> g<sup>k</sup></span></span>
+              <span class="func">F</span><sub>K,g</sub>(<span class="vec">p</span>) = <span class="fraction"><span>&Sigma;<sup>K−1</sup><sub>k=0</sub> g<sup>k</sup><span class="func">N</span>(2<sup>k</sup><span class="vec">p</span>)</span><span>&Sigma;<sup>K−1</sup><sub>k=0</sub> g<sup>k</sup></span></span>
             </p>
             <pre><code><span class="code-type">float</span> sum = <span class="code-number">0.0</span>, weight = <span class="code-number">0.0</span>;
 <span class="code-type">float</span> amplitude = <span class="code-number">1.0</span>;
@@ -108,17 +209,16 @@
           </div>
         </div>
         <p class="explanation">
-          Each octave doubles spatial frequency and multiplies amplitude by
-          <i>g = 0.7</i>. Division by the accumulated weight keeps the range
-          stable. The comparison uses three octaves; the final cloud shader uses
-          eight. Smoke uses the same construction with a slower decay,
-          <i>g = 0.9</i>, which retains more fine-scale variation.
+          The index <i>k</i> identifies an octave. Multiplication of the input by
+          <i>2<sup>k</sup></i> doubles frequency at each step, while the coefficient
+          <i>g<sup>k</sup></i> reduces its amplitude. Division by
+          <i>&Sigma;g<sup>k</sup></i> normalizes the weights to sum to 1. Hence
+          <span class="func">F</span><sub>K,g</sub><i>:ℝ²→[0,1]</i>.
         </p>
         <div class="math-notes">
-          <p>The summation symbol in the panel is shorthand for repeatedly adding terms. For the three-scale figure it expands to:</p>
-          <p class="worked-equation">C(<b>p</b>) = [n(<b>p</b>) + 0.7n(2<b>p</b>) + 0.49n(4<b>p</b>)] / 2.19</p>
-          <p><code>2p</code> makes features half as wide; <code>4p</code> makes them one quarter as wide. The weights 0.7 and 0.49 make the smaller features weaker.</p>
-          <p>The denominator 2.19 is simply <i>1 + 0.7 + 0.49</i>. Dividing by it prevents the image from becoming brighter or taller just because more octaves were added.</p>
+          <p>For the displayed comparison, <i>K = 3</i> and <i>g = 0.7</i>. Thus the three weights are 1, 0.7, and 0.49, whose sum is 2.19.</p>
+          <p>The inputs <i>2<span class="vec">p</span></i> and <i>4<span class="vec">p</span></i> produce features one half and one quarter as wide as those in <span class="func">N</span>(<span class="vec">p</span>).</p>
+          <p>The final clouds use <span class="func">F</span><sub>8,0.7</sub>. The smoke uses <span class="func">F</span><sub>8,0.9</sub>; its larger gain preserves more high-frequency variation.</p>
         </div>
       </section>
 
@@ -126,15 +226,33 @@
         <p class="step">3</p>
         <h2 id="depth-title">Layers and parallax</h2>
         <p>
-          Look through a train window: a nearby fence sweeps past quickly while
-          distant hills barely move. This is parallax. The shader imitates it by
-          dividing time by an artificial distance <i>d</i>.
+          Let <i>x</i> denote horizontal image position and let <i>t</i> denote
+          nonnegative time. The subscript <i>i</i> identifies one cloud layer,
+          and <i>d<sub>i</sub></i> is that layer’s positive apparent-distance
+          parameter. Its horizontal displacement is written
+          <i>&Delta;x<sub>i</sub>(t)</i>; the capital Greek letter &Delta; denotes
+          a change in position.
         </p>
-        <p class="small-equation">horizontal shift = time / distance</p>
+        <p class="small-equation">
+          &Delta;x<sub>i</sub>(t) = t/d<sub>i</sub>, &nbsp;
+          d&Delta;x<sub>i</sub>/dt = 1/d<sub>i</sub>
+        </p>
         <p>
-          The same cloud function is then reused at different heights, sizes,
-          phases, and distances. Painting slow pale layers first and fast dark
-          layers last produces a simple sense of depth.
+          Consequently, large <i>d<sub>i</sub></i> gives low apparent velocity and
+          small <i>d<sub>i</sub></i> gives high apparent velocity. This
+          distance-dependent motion is the parallax cue used by the scene. The
+          derivative <i>d&Delta;x<sub>i</sub>/dt</i> denotes displacement change
+          per unit time—that is, apparent velocity.
+        </p>
+        <p>
+          To sample layer <i>i</i>, <i>&lambda;<sub>i</sub></i> sets horizontal
+          frequency, <i>&phi;<sub>i</sub></i> adds a phase offset, and
+          <i>&eta;<sub>i</sub></i> selects a fixed vertical coordinate in the noise
+          field. The scalar <i>q<sub>i</sub></i> is the resulting horizontal
+          coordinate, while <span class="vec">q</span><sub>i</sub> is the complete
+          two-dimensional sampling position. Finally, <i>m<sub>i</sub></i> is mean
+          height, <i>A<sub>i</sub></i> is vertical amplitude, and
+          <i>h<sub>i</sub>(x,t)</i> denotes the final layer height.
         </p>
         <div class="study-panel">
           <figure class="visual-panel">
@@ -142,8 +260,10 @@
           </figure>
           <div class="study-text centered">
             <p class="equation equation-large">
+              q<sub>i</sub>(x,t) = &lambda;<sub>i</sub>(x + t/d<sub>i</sub>) + &phi;<sub>i</sub><br>
+              <span class="vec">q</span><sub>i</sub>(x,t) = (q<sub>i</sub>(x,t), &eta;<sub>i</sub>)<br>
               h<sub>i</sub>(x,t) = m<sub>i</sub> + A<sub>i</sub>
-              [C(&lambda;<sub>i</sub>(x + t/d<sub>i</sub>) + &phi;<sub>i</sub>) − ½]
+              [<span class="func">F</span><sub>3,0.7</sub>(<span class="vec">q</span><sub>i</sub>(x,t)) − ½]
             </p>
             <pre><code><span class="code-type">float</span> q = frequency
         * (x + time / distance)
@@ -153,17 +273,15 @@
           </div>
         </div>
         <p class="explanation">
-          The symbols correspond directly to the code: <i>m</i> is
-          <code>middle</code>, <i>A</i> is <code>spread</code>, and
-          <i>d</i> is <code>distance</code>. The frequency &lambda; controls the
-          horizontal feature size, while &phi; gives each layer a different slice
-          of the noise field. Since velocity is proportional to 1/<i>d</i>, a
-          larger distance produces slower motion.
+          The function <i>h<sub>i</sub>(x,t)</i> returns the height of layer
+          <i>i</i> at horizontal position <i>x</i> and time <i>t</i>. Read the
+          construction from the inside outward: move the sample, scale and offset
+          it, evaluate the noise, then scale and translate the resulting height.
         </p>
         <div class="math-notes">
-          <p>Read the equation from inside outward: move the sample by <i>t/d</i>; use &lambda; to choose the feature size; use &phi; to select a different part of the noise; then evaluate the cloud.</p>
-          <p>Because cloud noise lies roughly between 0 and 1, subtracting ½ centres it around zero. <i>A</i> controls how far it moves up and down, and <i>m</i> lifts the complete line to its intended height.</p>
-          <p>For example, a layer with <i>d = 20</i> moves one tenth as fast as a layer with <i>d = 2</i>. This relative motion is the depth cue.</p>
+          <p>The teaching shader fixes <i>&eta;<sub>i</sub> = 1.7</i>, so each layer samples a horizontal slice of the 2D field. The production shader instead permits the second coordinate to vary with the pixel.</p>
+          <p>Since <i>0≤</i><span class="func">F</span><sub>3,0.7</sub>(<span class="vec">q</span><sub>i</sub>)<i>≤1</i>, subtraction of ½ centres its output around zero. Multiplication by <i>A<sub>i</sub></i> sets the displacement range, and addition of <i>m<sub>i</sub></i> sets the vertical position.</p>
+          <p>For example, <i>d<sub>1</sub> = 20</i> and <i>d<sub>2</sub> = 2</i> imply velocities 1/20 and 1/2; therefore layer 2 moves ten times as fast as layer 1.</p>
         </div>
       </section>
 
@@ -171,15 +289,28 @@
         <p class="step">4</p>
         <h2 id="form-title">Train and bridge masks</h2>
         <p>
-          A mask is a stencil: 1 means “paint this pixel” and 0 means “leave the
-          existing colour.” A wheel begins with the familiar definition of a
-          circle—every point closer than radius <i>r</i> to its centre <i>c</i>.
+          A spatial mask <span class="func">M</span> assigns every point
+          <span class="vec">p</span> in the two-dimensional image plane a number
+          from 0 to 1. This mapping is written
+          <i>M:ℝ²→[0,1]</i>. The values 0 and 1 represent exclusion and inclusion,
+          respectively; intermediate values represent partial edge coverage.
+          A binary disk of centre <span class="vec">c</span> and radius
+          <i>r&gt;0</i> is defined by the Euclidean distance
+          ‖<span class="vec">p</span>−<span class="vec">c</span>‖.
+          The symbol 𝟙 below is an indicator: it equals 1 when the condition in
+          its subscript is true and equals 0 otherwise.
         </p>
-        <p class="small-equation">inside the wheel when distance(pixel, centre) &lt; radius</p>
+        <p class="small-equation">
+          <span class="func">M</span><sub class="label">disk</sub>(<span class="vec">p</span>) =
+          𝟙<sub>{‖<span class="vec">p</span>−<span class="vec">c</span>‖ &lt; r}</sub>
+        </p>
         <p>
-          Rectangular masks form the body and chimney. Repeating the horizontal
-          coordinate produces carriages and bridge spans without listing every
-          copy separately.
+          The teaching shader replaces the hard disk boundary with a transition
+          of width <i>&epsilon; &gt; 0</i>. Rectangular indicator functions form the
+          body and chimney, while <code>fract(k u.x)</code> maps every horizontal
+          interval of length <i>1/k</i> to [0,1), thereby repeating carriages and
+          bridge spans. In this code expression, <code>u.x</code> is normalized
+          horizontal position and <i>k</i> is the positive repetition count.
         </p>
         <div class="study-panel">
           <figure class="visual-panel">
@@ -187,8 +318,11 @@
           </figure>
           <div class="study-text">
             <p class="equation equation-lines">
-              M<sub>wheel</sub> = 1 − smoothstep(r, r + &epsilon;, ‖<b>p</b> − <b>c</b>‖)<br>
-              M<sub>train</sub> = max(M<sub>body</sub>, M<sub>chimney</sub>, M<sub>wheels</sub>)
+              <span class="func">M</span><sub class="label">wheel</sub>(<span class="vec">p</span>) = 1 −
+              <span class="operator">smoothstep</span>(r, r + &epsilon;,
+              ‖<span class="vec">p</span>−<span class="vec">c</span>‖)<br>
+              <span class="func">M</span><sub class="label">train</sub> =
+              <span class="operator">max</span>(M<sub class="label">body</sub>, M<sub class="label">chimney</sub>, M<sub class="label">wheels</sub>)
             </p>
             <pre><code><span class="code-type">float</span> wheel = <span class="code-number">1.0</span> - smoothstep(
   radius, radius + <span class="code-number">0.004</span>,
@@ -198,18 +332,15 @@
           </div>
         </div>
         <p class="explanation">
-          The wheel mask is one inside the radius and zero outside it; the narrow
-          &epsilon; interval softens its edge. Taking the maximum is the union of
-          the component masks. The compact study combines them into one colour,
-          while the final shader retains separate masks for the wagon, roof,
-          locomotive, chimney, and wheels so those parts can use different tones.
-          It also uses a hard <code>step</code> test on squared distance for its
-          much smaller final-render wheels.
+          The GLSL function <code>smoothstep(r,r+ε,d)</code> equals 0 for
+          <i>d ≤ r</i>, equals 1 for <i>d ≥ r+ε</i>, and varies smoothly between
+          them. Subtraction from 1 therefore gives an antialiased disk mask.
+          Pointwise <code>max</code> forms the union of the component masks.
         </p>
         <div class="math-notes">
-          <p>The distance ‖<b>p</b>−<b>c</b>‖ asks how far the current pixel is from a wheel centre. Pixels nearer than radius <i>r</i> receive a mask value of 1; pixels outside <i>r + &epsilon;</i> receive 0.</p>
-          <p><code>smoothstep</code> changes gradually from 0 to 1 across the tiny interval &epsilon;. Subtracting it from 1 makes the inside opaque and the outside transparent while keeping the edge smooth.</p>
-          <p><code>max</code> performs a union: if any component contains the pixel, the complete train mask contains it.</p>
+          <p>The teaching figure uses <i>&epsilon; = 0.004</i>. The production shader instead tests squared distance with <code>step</code>, avoiding a square root and producing a hard boundary at its much smaller wheel scale.</p>
+          <p>If <i>M<sub>1</sub></i> and <i>M<sub>2</sub></i> are binary masks, then <i>max(M<sub>1</sub>,M<sub>2</sub>) = 1</i> exactly when at least one mask equals 1. This is the set-theoretic union.</p>
+          <p>The teaching figure assigns one colour to <span class="func">M</span><sub class="label">train</sub>; the production shader keeps wagon, roof, locomotive, chimney, and wheel masks separate so each may select a different colour.</p>
         </div>
       </section>
 
@@ -217,15 +348,30 @@
         <p class="step">5</p>
         <h2 id="smoke-title">A widening, irregular smoke plume</h2>
         <p>
-          Imagine drawing a thick ribbon around a pencil line. The line gives the
-          smoke its path; a width value says how far pixels may lie from that path
-          and still belong to the plume.
+          Let <span class="vec">x</span><sub class="label">frag</sub><i>∈ℝ²</i>
+          denote pixel coordinates and let <i>H&gt;0</i> denote the viewport height.
+          The production geometry uses the height-normalized coordinate
+          <span class="vec">p</span> = <span class="vec">x</span><sub class="label">frag</sub>/<i>H</i>.
+          Let <i>p</i><sub class="label">chim</sub><i> = 0.49</i> be the chimney’s horizontal coordinate.
+          For pixels behind the chimney, define
+          <i>&rho; = p</i><sub class="label">chim</sub><i>−p<sub>1</sub> ≥ 0</i> as horizontal distance
+          from the source.
         </p>
-        <p class="small-equation">smoke pixel when |pixel height − centre height| &lt; width</p>
         <p>
-          The shader bends the centreline upward with a square root, changes the
-          width with distance from the chimney, and adds fBm so the ribbon does
-          not look mechanically perfect.
+          Let <i>&mu;(<span class="vec">p</span>,t)</i> denote the plume’s centre
+          height and let <i>&delta;(&rho;)</i> denote its half-width. The smoke mask
+          <span class="func">M</span><sub class="label">S</sub> equals 1 precisely
+          when the pixel height <i>p<sub>2</sub></i> lies within that half-width.
+        </p>
+        <p class="small-equation">
+          <span class="func">M</span><sub class="label">S</sub>(<span class="vec">p</span>,t) =
+          𝟙<sub>{|p<sub>2</sub>−&mu;(<span class="vec">p</span>,t)| &lt; &delta;(&rho;)}</sub>
+        </p>
+        <p>
+          The field <i>G(<span class="vec">p</span>,t)</i> denotes the moving
+          eight-octave noise that perturbs the centre height. The following
+          equations define <i>G</i>, <i>&mu;</i>, and <i>&delta;</i> explicitly; <i>e</i>
+          is the base of the natural exponential function.
         </p>
         <div class="study-panel">
           <figure class="visual-panel">
@@ -233,17 +379,21 @@
           </figure>
           <div class="study-text">
             <p class="equation equation-lines">
-              x = u<sub>chimney</sub> − u<sub>x</sub><br>
-              c(x,t) = 0.16&radic;x + 0.12 − 0.4N(<b>u</b>,t)<br>
-              w(x) = 0.8xe<sup>−10x</sup><br>
-              M<sub>smoke</sub> = [|u<sub>y</sub>−c(x,t)| &lt; w(x)]
+              &rho; = p<sub class="label">chim</sub> − p<sub>1</sub><br>
+              <span class="func">G</span>(<span class="vec">p</span>,t) =
+              <span class="func">F</span><sub>8,0.9</sub>(<span class="vec">p</span> + (0.16t+3.5,0)) − 0.55<br>
+              &mu;(<span class="vec">p</span>,t) =
+              0.16&radic;&rho; + 0.12 − 0.4<span class="func">G</span>(<span class="vec">p</span>,t)<br>
+              &delta;(&rho;) = 0.8&rho;e<sup>−10&rho;</sup><br>
+              <span class="func">M</span><sub class="label">S</sub>(<span class="vec">p</span>,t) =
+              𝟙<sub>{|p<sub>2</sub>−&mu;(<span class="vec">p</span>,t)| &lt; &delta;(&rho;)}</sub>
             </p>
           </div>
         </div>
         <div class="math-notes">
-          <p>The horizontal distance <i>x</i> is zero at the chimney and increases behind the train. The square root bends the plume upward quickly near the chimney and more gradually farther away.</p>
-          <p><i>N</i> denotes <code>fbm2(...) − 0.55</code>: the eight-octave smoke noise with gain 0.9, shifted so it fluctuates around zero. Subtracting it from the centreline makes the plume wander rather than follow a perfect curve.</p>
-          <p>In <i>w(x) = 0.8xe<sup>−10x</sup></i>, the factor <i>x</i> first widens the plume, while the exponential factor eventually shrinks it. Together they reach maximum width at <i>x = 0.1</i>.</p>
+          <p>The field <span class="func">G</span> is <span class="func">F</span><sub>8,0.9</sub> translated horizontally with time and shifted by 0.55. The term <i>−0.4</i><span class="func">G</span> perturbs the nominal centre curve. Since <span class="func">G</span> depends on both coordinates of <span class="vec">p</span>, the plume boundary is implicit rather than the graph of a one-dimensional function.</p>
+          <p>The deterministic term <i>0.16√&rho;+0.12</i> has derivative <i>0.08/√&rho;</i> for <i>&rho;&gt;0</i>; hence the nominal centre curve rises rapidly near the chimney and more gradually farther away.</p>
+          <p>For <i>&delta;(&rho;)=0.8&rho;e<sup>−10&rho;</sup></i>, differentiation gives <i>&delta;′(&rho;)=0.8e<sup>−10&rho;</sup>(1−10&rho;)</i>. Therefore the half-width increases on <i>[0,0.1]</i>, reaches its maximum at <i>&rho;=0.1</i>, and decreases thereafter.</p>
         </div>
       </section>
 
@@ -251,30 +401,61 @@
         <p class="step">6</p>
         <h2 id="synthesis-title">Final expression</h2>
         <p>
-          Think of the scene as transparent sheets placed on a desk. The sheet
-          placed last hides earlier sheets wherever it is opaque. In GLSL, one
-          such placement is a colour blend controlled by a mask.
+          For viewport width <i>W&gt;0</i> and height <i>H&gt;0</i>, define normalized
+          display coordinates by
+          <i><span class="vec">u</span>=(x<sub class="label">frag,1</sub>/W,
+          x<sub class="label">frag,2</sub>/H)∈[0,1]²</i>. Unlike the
+          height-normalized coordinate <span class="vec">p</span>, this definition
+          scales each coordinate by the corresponding viewport dimension.
         </p>
-        <p class="small-equation">new colour = mix(old colour, layer colour, layer mask)</p>
         <p>
-          The production shader draws background clouds, train, smoke, bridge,
-          and foreground clouds in that order, following the source composition
+          For colours <span class="vec">a</span>,<span class="vec">b</span>
+          <i>∈[0,1]³</i> and mask value <i>m∈[0,1]</i>, define the compositing
+          operator <span class="operator">Blend</span> by component-wise linear interpolation.
+        </p>
+        <p class="small-equation">
+          <span class="operator">Blend</span>(<span class="vec">a</span>,<span class="vec">b</span>;m)
+          = (1−m)<span class="vec">a</span> + m<span class="vec">b</span>
+        </p>
+        <p>
+          Sequential application of <span class="operator">Blend</span> is order-dependent: a later
+          layer replaces an earlier colour wherever its mask equals 1. The
+          production order follows the source shader
           <a class="ref-mark" href="#ref-shadertoy">[1]</a>.
         </p>
+        <p class="notation">
+          The colour vectors <span class="vec">c</span><sub class="label">bg</sub>,
+          <span class="vec">c</span><sub class="label">T</sub>,
+          <span class="vec">c</span><sub class="label">S</sub>, and
+          <span class="vec">c</span><sub class="label">B</sub> denote the
+          background, train, smoke, and bridge colours. Their masks are
+          <span class="func">M</span><sub class="label">T</sub>,
+          <span class="func">M</span><sub class="label">S</sub>, and
+          <span class="func">M</span><sub class="label">B</sub>.
+          The vector <span class="vec">c</span><sub class="label">fg</sub> and
+          scalar &alpha;<sub class="label">fg</sub> are the foreground colour and
+          opacity. The function <i>V</i>, defined below, is the vignette factor.
+          The vectors <span class="vec">c</span><sub>0</sub> through
+          <span class="vec">c</span><sub>3</sub> are intermediate colours after
+          successive compositing steps.
+        </p>
         <div class="final-expression">
-          F(<b>u</b>,t) = V(<b>u</b>) [L<sub>bg</sub> ⊕ M<sub>train</sub>
-          ⊕ S<sub>smoke</sub> ⊕ M<sub>bridge</sub> ⊕ L<sub>fg</sub>]
+          <span class="vec">c</span><sub>0</sub> = <span class="vec">c</span><sub class="label">bg</sub><br>
+          <span class="vec">c</span><sub>1</sub> = <span class="operator">Blend</span>(<span class="vec">c</span><sub>0</sub>,<span class="vec">c</span><sub class="label">T</sub>;<span class="func">M</span><sub class="label">T</sub>)<br>
+          <span class="vec">c</span><sub>2</sub> = <span class="operator">Blend</span>(<span class="vec">c</span><sub>1</sub>,<span class="vec">c</span><sub class="label">S</sub>;<span class="func">M</span><sub class="label">S</sub>)<br>
+          <span class="vec">c</span><sub>3</sub> = <span class="operator">Blend</span>(<span class="vec">c</span><sub>2</sub>,<span class="vec">c</span><sub class="label">B</sub>;<span class="func">M</span><sub class="label">B</sub>)<br>
+          <span class="vec">c</span><sub class="label">scene</sub> = <span class="operator">Blend</span>(<span class="vec">c</span><sub>3</sub>,<span class="vec">c</span><sub class="label">fg</sub>;&alpha;<sub class="label">fg</sub>)<br>
+          <span class="vec">c</span><sub class="label">out</sub>(<span class="vec">u</span>,t)
+          = <span class="func">V</span>(<span class="vec">u</span>)<span class="vec">c</span><sub class="label">scene</sub>(<span class="vec">u</span>,t)
         </div>
         <p class="equation vignette-equation">
-          V(<b>u</b>) = ½ + ½[16u<sub>x</sub>u<sub>y</sub>(1−u<sub>x</sub>)(1−u<sub>y</sub>)]<sup>0.2</sup>
-        </p>
-        <p class="notation">
-          The operator ⊕ means “draw over,” from left to right. The vignette
-          equals 1 at the image centre and falls to 0.5 at its edges.
+          <span class="func">V</span>(<span class="vec">u</span>) =
+          ½ + ½[16u<sub>1</sub>u<sub>2</sub>(1−u<sub>1</sub>)(1−u<sub>2</sub>)]<sup>0.2</sup>
         </p>
         <div class="math-notes">
-          <p>The ⊕ symbols mean the same ordered “draw over” operation as <code>mix</code>. Foreground clouds can cover the bridge, and the bridge can cover smoke where their masks overlap.</p>
-          <p>The second pass multiplies the finished scene by <i>V</i>. At the image centre, both coordinates are ½ and <i>V = 1</i>, so the colour is unchanged. At any edge, <i>V = 0.5</i>, so the colour is half as bright.</p>
+          <p>All masks and colours in the recurrence are evaluated at the same pixel and time; these arguments are suppressed to keep the composition legible.</p>
+          <p>The first pass computes <span class="vec">c</span><sub class="label">scene</sub>. Because bridge compositing follows smoke compositing, the bridge replaces smoke where both masks are nonzero; foreground clouds similarly replace all preceding layers.</p>
+          <p>The second pass applies <span class="func">V</span><i>:[0,1]²→[0.5,1]</i>. At <span class="vec">u</span>=(½,½), <span class="func">V</span>=1. On any image boundary, one coordinate factor vanishes and <span class="func">V</span>=0.5.</p>
         </div>
       </section>
 
