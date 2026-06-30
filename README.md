@@ -49,6 +49,7 @@ cloudglen_express/
 ├── style.css                  academic page layout and bounded canvas sizing
 ├── main.js                    final two-pass WebGL2 renderer and audio control
 ├── process-demos.js           shared debug renderer for the six figures
+├── webgl-utils.js             shared WebGL setup, loading, and error helpers
 ├── shaders/
 │   ├── common.glsl            production functions shared by scene and figures
 │   ├── debug.glsl             intermediate-output debug modes

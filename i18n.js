@@ -2,6 +2,22 @@ const htmlEntries = [];
 const textEntries = [];
 const attributeEntries = [];
 
+const controlText = {
+  en: {
+    music: ({ enabled }) => `Music: ${enabled ? "On" : "Off"}`,
+    fullscreen: ({ active }) => active ? "Exit fullscreen" : "Fullscreen",
+  },
+  "zh-CN": {
+    music: ({ enabled }) => `音乐：${enabled ? "开" : "关"}`,
+    fullscreen: ({ active }) => active ? "退出全屏" : "全屏",
+  },
+};
+
+export function getControlText(key, state) {
+  const language = document.documentElement.lang === "zh-CN" ? "zh-CN" : "en";
+  return controlText[language][key](state);
+}
+
 function registerHTML(selector, zh) {
   const element = document.querySelector(selector);
   if (!element) {
@@ -14,11 +30,10 @@ function registerHTML(selector, zh) {
 function registerParagraphs(titleId, translations) {
   const section = document.querySelector(`section[aria-labelledby="${titleId}"]`);
   if (!section) return;
-  const paragraphs = [...section.children].filter((element) => element.tagName === "P");
-  for (const [index, zh] of Object.entries(translations)) {
-    const element = paragraphs[Number(index)];
+  for (const [key, zh] of Object.entries(translations)) {
+    const element = section.querySelector(`[data-i18n="${key}"]`);
     if (!element) {
-      console.warn(`Missing paragraph ${index} in ${titleId}`);
+      console.warn(`Missing translation target: ${key}`);
       continue;
     }
     htmlEntries.push({ element, en: element.innerHTML, zh });

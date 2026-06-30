@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="A progressive GLSL study of procedural clouds, parallax, and silhouette composition.">
     <title>Cloudglen Express</title>
-    <link rel="stylesheet" href="./style.css?v=20260629-10">
+    <link rel="stylesheet" href="./style.css?v=20260630-1">
   </head>
   <body>
     <main class="page">
@@ -31,7 +31,7 @@
       <section aria-labelledby="noise-title">
         <p class="step">1</p>
         <h2 id="noise-title">Interpolation</h2>
-        <p>
+        <p data-i18n="1">
           Let <i>a</i> and <i>b</i> be two real numbers. Let <i>&tau;</i> (Greek
           “tau”) be a parameter between 0 and 1 that measures progress from
           <i>a</i> to <i>b</i>. Define the linear interpolation operator
@@ -43,7 +43,7 @@
           the line segment joining <i>a</i> and <i>b</i>. GLSL implements
           <span class="func">L</span> as <code>mix</code>.
         </p>
-        <p class="figure-intro">
+        <p class="figure-intro" data-i18n="2">
           In two dimensions, <i>&tau;<sub>1</sub></i> measures horizontal progress
           and <i>&tau;<sub>2</sub></i> measures vertical progress.
         </p>
@@ -95,7 +95,7 @@
         </div>
 
         <h3>Value noise with Perlin’s fade</h3>
-        <p>
+        <p data-i18n="3">
           The shader divides the image plane into square cells and assigns a
           random scalar to each corner. If adjacent values are joined by straight
           lines, each cell has a constant slope, but the slope usually changes
@@ -151,14 +151,14 @@
           </svg>
           <figcaption>Linear joins have corners; the quintic fade gives every cell a flat entrance and exit.</figcaption>
         </figure>
-        <p>
+        <p data-i18n="4">
           Perlin’s quintic fade <a class="ref-mark" href="#ref-perlin">[2]</a>
           preserves the endpoints: <i>S(0)=0</i> and <i>S(1)=1</i>. Its first and
           second derivatives are also zero at both ends. In geometric terms,
           every cell reaches a shared boundary with zero slope and zero curvature,
           so neighbouring cells agree in value, slope, and curvature.
         </p>
-        <p>
+        <p data-i18n="5">
           A point <span class="vec">p</span> has global image coordinates. The
           operator <span class="operator">fract</span> discards the whole-number
           cell index and retains only the position inside that cell:
@@ -207,7 +207,7 @@
           </svg>
           <figcaption><span class="operator">fract</span> converts a global position into coordinates inside one unit cell.</figcaption>
         </figure>
-        <p>
+        <p data-i18n="6">
           The subscripts in <i>v<sub>ij</sub></i> identify a corner: <i>i=0</i>
           or 1 selects left or right, and <i>j=0</i> or 1 selects bottom or top.
           Applying <i>S</i> to the two local coordinates gives
@@ -220,7 +220,7 @@
           <a class="ref-mark" href="#ref-blue-noise">[4]</a>; the heatmap uses
           that same texture and the same production <i>N</i> function.
         </p>
-        <p>
+        <p data-i18n="7">
           The visual below samples the square region <i>[0,4]²</i>. Each image
           position represents a point <span class="vec">p</span>=(<i>x,y</i>), and
           its grayscale brightness represents the scalar value
@@ -266,7 +266,7 @@
       <section aria-labelledby="cloud-title">
         <p class="step">2</p>
         <h2 id="cloud-title">Octaves</h2>
-        <p>
+        <p data-i18n="1">
           Let <span class="func">N</span><i>:ℝ²→[0,1]</i> be the value-noise field from Section 1. A
           single evaluation scale contains broad variation but little fine
           structure. Additional copies of <span class="func">N</span>, evaluated at successively
@@ -275,7 +275,7 @@
           combination of three such scales; the subscript records three scales
           and an amplitude multiplier of 0.7.
         </p>
-        <p>
+        <p data-i18n="2">
           Start with only two octaves. The first field supplies broad variation;
           the second evaluates the same function at twice the spatial frequency
           and contributes with relative weight <i>g</i>. Division by <i>1+g</i>
@@ -300,14 +300,14 @@
             + 0.49<span class="func">N</span>(4<span class="vec">p</span>)] / 2.19.
           </span>
         </p>
-        <p>
+        <p data-i18n="5">
           This is the general formula with <i>K=3</i> and <i>g=0.7</i> substituted
           into it. The sum contains exactly the indices <i>k=0,1,2</i>:
           <i>0.7²=0.49</i>, <i>2²=4</i>, and
           <i>1+0.7+0.49=2.19</i>. Thus the two displayed forms are the same
           expression, not different definitions.
         </p>
-        <p>
+        <p data-i18n="6">
           Each term is called an octave. More generally, <i>K</i> denotes a
           positive integer number of octaves, and <i>g</i> denotes an amplitude
           gain strictly between 0 and 1. The index <i>k</i> counts the octaves
@@ -316,7 +316,7 @@
           motion (fBm) in procedural
           graphics <a class="ref-mark" href="#ref-fbm">[3]</a>.
         </p>
-        <p>
+        <p data-i18n="7">
           In the general expression below, multiplying <span class="vec">p</span>
           by <i>2<sup>k</sup></i> makes octave <i>k</i> vary <i>2<sup>k</sup></i>
           times as rapidly in space, while <i>g<sup>k</sup></i> reduces its
@@ -324,13 +324,13 @@
           sum to 1, so <i>F<sub>K,g</sub>(<span class="vec">p</span>)</i> remains
           between 0 and 1 whenever <i>N(<span class="vec">p</span>)</i> does.
         </p>
-        <p>
+        <p data-i18n="8">
           The loop mirrors the formula: <code>p *= 2</code> produces
           <i>2<sup>k</sup><span class="vec">p</span></i>,
           <code>amplitude *= gain</code> produces <i>g<sup>k</sup></i>, and
           <code>sum / weight</code> performs the normalization.
         </p>
-        <p>
+        <p data-i18n="9">
           The six heatmaps below use the same base region
           <span class="vec">p</span><i>∈[0,4]²</i>. The top row isolates the first
           three raw octave fields. The bottom row accumulates two, three, and
@@ -371,12 +371,12 @@
       <section aria-labelledby="depth-title">
         <p class="step">3</p>
         <h2 id="depth-title">Parallax</h2>
-        <p>
+        <p data-i18n="1">
           Section 2 displays <span class="func">F</span><sub>8,0.7</sub> as
           grayscale so that its numerical values are visible. It first converts them into the boundary
           of a filled region.
         </p>
-        <p>
+        <p data-i18n="2">
           Begin with a one-dimensional slice
           <i>f(x)=<span class="func">F</span><sub>8,0.7</sub>((x,0))</i>. Let
           <i>m</i> be a baseline height and <i>A&gt;0</i> a vertical amplitude.
@@ -388,12 +388,12 @@
           h(x) = m + A[f(x)−½]<br>
           M(x,y) = 𝟙<sub>{y&lt;h(x)}</sub>
         </p>
-        <p>
+        <p data-i18n="4">
           Parallax is then introduced by translating the input of the same noise
           field. The noise pattern is unchanged; only the position at which it is
           sampled changes with time and apparent distance.
         </p>
-        <p>
+        <p data-i18n="5">
           Let <span class="vec">p</span>=(<i>p<sub>1</sub>,p<sub>2</sub></i>) be the
           height-normalized scene coordinate, and let <i>t</i> denote scaled
           animation time. The subscript <i>i</i> identifies a cloud layer. Each
@@ -427,13 +427,13 @@
           </svg>
           <figcaption>For equal elapsed time, apparent speed is inversely proportional to distance.</figcaption>
         </figure>
-        <p>
+        <p data-i18n="7">
           The shader samples at <i>p<sub>1</sub>+t/d<sub>i</sub></i>; therefore a
           fixed feature appears at <i>p<sub>1</sub>=
           constant−t/d<sub>i</sub></i> and moves left. Its speed magnitude is
           <i>1/d<sub>i</sub></i>, so distant layers move more slowly.
         </p>
-        <p>
+        <p data-i18n="8">
           The production version replaces the introductory horizontal slice by
           a full two-dimensional lookup. At every pixel, it evaluates the noise,
           converts that value into a local threshold, and tests whether
@@ -444,7 +444,7 @@
           layer’s middle height and displacement amplitude. Both coordinates of
           <span class="vec">p</span> enter the production noise field.
         </p>
-        <p>
+        <p data-i18n="9">
           The four panels isolate the outer masks of actual background layers
           c12, c11, c10, and c9 from the final shader. White is outside the mask
           and black is inside.
@@ -482,7 +482,7 @@
       <section aria-labelledby="form-title">
         <p class="step">4</p>
         <h2 id="form-title">Masks</h2>
-        <p>
+        <p data-i18n="1">
           A spatial mask <span class="func">M</span> assigns every point
           <span class="vec">p</span> in the two-dimensional image plane a number
           from 0 to 1. The values 0 and 1 mean exclusion and inclusion. The
@@ -490,7 +490,7 @@
           masks, and hard circular wheel masks. The symbol 𝟙 denotes an indicator:
           it returns 1 when its subscript condition is true and 0 otherwise.
         </p>
-        <p>
+        <p data-i18n="2">
           Begin in one dimension. An interval mask selects the points between
           <i>a</i> and <i>b</i>. A rectangle applies the same test independently to
           horizontal and vertical coordinates; a disk replaces those coordinate
@@ -537,7 +537,7 @@
           <span class="func">M</span><sub class="label">wheel</sub>(<span class="vec">p</span>) =
           𝟙<sub>{‖<span class="vec">p</span>−<span class="vec">c</span>‖² &lt; r²}</sub>
         </p>
-        <p>
+        <p data-i18n="5">
           The operation <span class="operator">fract</span>(9<span class="vec">p</span>)
           repeats local coordinates every <i>1/9</i> scene units, allowing one
           wagon and wheel pattern to generate the complete train. The combined
@@ -545,13 +545,13 @@
           their set-theoretic union. These analytic tests avoid mesh or image
           assets and remain sharply defined at any output resolution.
         </p>
-        <p>
+        <p data-i18n="6">
           The bridge function in the source shader computes a keep mask
           <i>K<sub>B</sub></i>: it equals 1 where the existing scene colour is
           preserved and 0 where bridge colour is inserted. Therefore the bridge
           inclusion mask is <i>M<sub>B</sub>=1−K<sub>B</sub></i>.
         </p>
-        <p>
+        <p data-i18n="7">
           The left panel enlarges the train mask and the right shows the bridge
           mask. Black denotes 0 and white denotes 1. In the maximum below, every
           component mask is evaluated at the same point <span class="vec">p</span>;
@@ -585,7 +585,7 @@
       <section aria-labelledby="smoke-title">
         <p class="step">5</p>
         <h2 id="smoke-title">Smoke</h2>
-        <p>
+        <p data-i18n="1">
           Start with an ordinary horizontal strip. Let
           <span class="vec">p</span>=(<i>x,y</i>) be a point in the scene, let
           <i>c</i> be the height of the strip’s centre, and let <i>w&gt;0</i> be
@@ -593,11 +593,11 @@
           to the centre is <i>|y−c|</i>. Therefore the point is inside the strip
           precisely when <i>|y−c|&lt;w</i>.
         </p>
-        <p class="small-equation equation-lines">
+        <p class="small-equation equation-lines" data-i18n="2">
           <span class="func">D</span>(<span class="vec">p</span>) = |y−c|−w<br>
           D&lt;0: inside, &nbsp; D=0: boundary, &nbsp; D&gt;0: outside
         </p>
-        <p>
+        <p data-i18n="3">
           Subtracting <i>w</i> from the distance creates a signed boundary value
           <i>D</i>. A negative result means that the point is less than one
           half-width from the centre and is therefore inside. Smoke is obtained
@@ -629,20 +629,20 @@
           </svg>
           <figcaption>Curvature controls the route, width controls the envelope, and noise removes mechanical regularity.</figcaption>
         </figure>
-        <p>
+        <p data-i18n="4">
           The chimney is at <i>x<sub>0</sub>=0.49</i>. Smoke exists to its left,
           so define <i>s=x<sub>0</sub>−x≥0</i>. The number <i>s</i> is simply the
           horizontal distance travelled from the chimney: <i>s=0</i> at the
           source and increases farther along the plume.
         </p>
-        <p>
+        <p data-i18n="5">
           Let <i>R(<span class="vec">p</span>,t)</i> be the eight-octave field from
           Section 2, sampled at a horizontally moving position. This is the
           grayscale field in the left panel. The centre height starts with the
           smooth curve <i>0.16√s+0.12</i>; the additional term
           <i>−0.4[R−0.55]</i> moves that curve up and down according to the noise.
         </p>
-        <p>
+        <p data-i18n="6">
           The width is <i>w(s)=0.8se<sup>−10s</sup></i>. It begins at zero,
           widens until <i>s=0.1</i>, and then narrows. The factor <i>s</i> causes
           the initial growth, while the exponential factor
@@ -651,7 +651,7 @@
           The condition <i>D&lt;0</i> selects all smoke; the stricter condition
           <i>D&lt;−0.02</i> selects points farther inside and forms the inner region.
         </p>
-        <p>
+        <p data-i18n="7">
           Thus the left panel supplies the small
           vertical changes in the centre curve. The right panel shows the result
           after the centre, width, and inside–outside test have been combined.
@@ -691,7 +691,7 @@
       <section class="synthesis" aria-labelledby="synthesis-title">
         <p class="step">6</p>
         <h2 id="synthesis-title">Composition</h2>
-        <p>
+        <p data-i18n="1">
           For viewport width <i>W&gt;0</i> and height <i>H&gt;0</i>, define normalized
           display coordinates by
           <i><span class="vec">u</span>=(x<sub class="label">frag,1</sub>/W,
@@ -699,7 +699,7 @@
           height-normalized coordinate <span class="vec">p</span>, this definition
           scales each coordinate by the corresponding viewport dimension.
         </p>
-        <p>
+        <p data-i18n="2">
           For colours <span class="vec">a</span>,<span class="vec">b</span>
           <i>∈[0,1]³</i> and mask value <i>m∈[0,1]</i>, define the compositing
           operator <span class="operator">Blend</span> by component-wise linear interpolation.
@@ -708,7 +708,7 @@
           <span class="operator">Blend</span>(<span class="vec">a</span>,<span class="vec">b</span>;m)
           = (1−m)<span class="vec">a</span> + m<span class="vec">b</span>
         </p>
-        <p>
+        <p data-i18n="4">
           The mask <i>m</i> is a weight. At <i>m=0</i> the result is entirely
           <span class="vec">a</span>; at <i>m=1</i> it is entirely
           <span class="vec">b</span>; and at <i>m=½</i> both colours contribute
@@ -740,13 +740,13 @@
           </svg>
           <figcaption>Interpolation depends on the mask value; compositing also depends on operation order.</figcaption>
         </figure>
-        <p>
+        <p data-i18n="5">
           Sequential application of <span class="operator">Blend</span> is order-dependent: a later
           layer replaces an earlier colour wherever its mask equals 1. The
           production order follows the source shader
           <a class="ref-mark" href="#ref-shadertoy">[1]</a>.
         </p>
-        <p>
+        <p data-i18n="6">
           Let <i>J</i> be the number of ordered paint operations in the scene
           pass. Operation <i>j</i> has source colour
           <span class="vec">s</span><sub>j</sub> and mask <i>m<sub>j</sub></i>.
@@ -755,13 +755,13 @@
           cloud opacity. The intermediate colour after operation <i>j</i> is
           <span class="vec">c</span><sub>j</sub>.
         </p>
-        <p>
+        <p data-i18n="7">
           Every colour and mask below is evaluated at the same pixel and time;
           those arguments are omitted for legibility. The renderer applies this
           recurrence in source order: each <code>mix</code> is one instance of
           <span class="operator">Blend</span>.
         </p>
-        <p>
+        <p data-i18n="8">
           After compositing, <i>V:[0,1]²→[0.5,1]</i> applies the vignette. It equals
           1 at <span class="vec">u</span>=(½,½) and 0.5 on every image boundary,
           so the centre is unchanged while the edges are multiplied by one half.
@@ -781,7 +781,7 @@
           <span class="func">V</span>(<span class="vec">u</span>) =
           ½ + ½[16u<sub>1</sub>u<sub>2</sub>(1−u<sub>1</sub>)(1−u<sub>2</sub>)]<sup>0.2</sup>
         </p>
-        <p>
+        <p data-i18n="10">
           The left panel displays <i>V</i>; the right multiplies a reference grid
           by <i>V</i>. The final showcase applies the same factor to the completed
           scene.
@@ -843,8 +843,7 @@
         </p>
       </footer>
     </main>
-    <script type="module" src="./i18n.js?v=20260629-1"></script>
-    <script type="module" src="./main.js?v=20260629-4"></script>
-    <script type="module" src="./process-demos.js?v=20260629-10"></script>
+    <script type="module" src="./main.js?v=20260630-1"></script>
+    <script type="module" src="./process-demos.js?v=20260630-1"></script>
   </body>
 </html>
